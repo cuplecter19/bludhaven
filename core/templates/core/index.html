@@ -1,0 +1,46 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>BLÜDHAVEN HUB</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'core/css/index.css' %}">
+</head>
+<body>
+    <nav class="navbar">
+        <div style="font-size: 2rem; color: var(--nw-blue);">TOYBOX</div>
+        <div class="nav-links">
+            {% if user.is_authenticated %}
+                {% if user.profile_image %}
+                    <img src="{{ user.profile_image.url }}" class="profile-circle">
+                {% else %}
+                    <div class="profile-circle" style="display:inline-block; background:#333;"></div>
+                {% endif %}
+                <span style="margin: 0 15px;">{{ user.nickname }} (🪙 {{ user.points }} PT)</span>
+                <a href="{% url 'accounts:profile_update' %}" style="color: var(--nw-blue); text-decoration: none;">PROFILE</a> |
+                <a href="{% url 'accounts:logout' %}" style="color: #ff0000; text-decoration: none;">LOGOUT</a>
+            {% else %}
+                <a href="{% url 'accounts:signup' %}" style="color: white; text-decoration: none;">JOIN</a> |
+                <a href="{% url 'accounts:login' %}" style="color: var(--nw-blue); text-decoration: none;">LOGIN</a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <div class="main-container">
+        <div class="hero-card">
+            <h1>MISSION CONTROL</h1>
+            {% if user.is_authenticated %}
+                <p>Welcome back, {{ user.nickname }}. Blüdhaven needs you.</p>
+            {% else %}
+                <p>Identify yourself to access the Toybox systems.</p>
+            {% endif %}
+        </div>
+
+        <div class="menu-grid">
+            <a href="{% url 'leitner:dashboard' %}" class="toy-btn">📚 LEITNER BOX</a>
+            <a href="#" class="toy-btn">📅 SCHEDULER</a>
+            <a href="{% url 'shop:shop' %}" class="toy-btn">💰 POINT SHOP</a>
+        </div>
+    </div>
+</body>
+</html>

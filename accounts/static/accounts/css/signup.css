@@ -1,0 +1,101 @@
+/* accounts/static/accounts/css/signup.css */
+
+:root {
+    --nw-blue: #0084ff;   /* 나이트윙 블루 */
+    --nw-black: #0a0a0a;  /* 슈트 블랙 */
+    --nw-gray: #1a1a1a;   /* 다크 그레이 */
+    --paper: #e0e0e0;
+    --yellow: #ffeb3b;
+    --green: #4caf50;
+}
+
+body {
+    background-color: var(--nw-black);
+    /* 푸른색 하프톤 패턴 */
+    background-image: radial-gradient(rgba(0, 132, 255, 0.2) 15%, transparent 16%);
+    background-size: 10px 10px;
+    font-family: 'Bangers', cursive;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    color: white;
+}
+
+.comic-box {
+    background: var(--nw-gray);
+    padding: 40px;
+    border: 4px solid var(--nw-blue);
+    box-shadow: 10px 10px 0px rgba(0, 132, 255, 0.5);
+    max-width: 400px;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+/* 나이트윙 로고 느낌의 상단 장식 */
+.comic-box::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 5px;
+    background: var(--nw-blue);
+    box-shadow: 0 0 15px var(--nw-blue);
+}
+
+h2 {
+    font-size: 3.5rem;
+    text-align: center;
+    color: var(--nw-blue);
+    text-shadow: 4px 4px 0px black;
+    margin-bottom: 30px;
+    letter-spacing: 2px;
+}
+
+.form-group { margin-bottom: 20px; }
+
+input {
+    width: 100%;
+    padding: 12px;
+    background: #222;
+    border: 2px solid #444;
+    color: white;
+    font-family: sans-serif;
+    box-sizing: border-box;
+    transition: 0.3s;
+}
+
+input:focus {
+    border-color: var(--nw-blue);
+    outline: none;
+    box-shadow: 0 0 10px var(--nw-blue);
+}
+
+button {
+    width: 100%;
+    padding: 15px;
+    background: var(--nw-blue);
+    color: white;
+    border: none;
+    font-family: 'Bangers', cursive;
+    font-size: 1.8rem;
+    cursor: pointer;
+    text-shadow: 2px 2px 0px black;
+    transition: 0.2s;
+    clip-path: polygon(5% 0%, 100% 0%, 95% 100%, 0% 100%); /* 약간 비스듬한 윙 모양 */
+}
+
+button:hover {
+    background: #00a2ff;
+    transform: scale(1.02);
+}
+
+.footer-text {
+    margin-top: 25px;
+    text-align: center;
+    font-family: sans-serif;
+    font-size: 0.9rem;
+    color: #888;
+}
+
+.footer-text a { color: var(--nw-blue); text-decoration: none; }

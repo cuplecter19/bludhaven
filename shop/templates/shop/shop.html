@@ -1,0 +1,234 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>SHOP | BLÜDHAVEN</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'core/css/index.css' %}">
+    <link rel="stylesheet" href="{% static 'shop/css/shop.css' %}">
+</head>
+<body>
+<div class="shop-container">
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="msg-box {% if message.tags == 'success' %}msg-success{% else %}msg-error{% endif %}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <h1 class="shop-title">NIGHTWING SHOP</h1>
+
+    <!-- 스탯 헤더 -->
+    <div class="stat-grid">
+        <div class="stat-box">
+            <p class="stat-label">보유 포인트</p>
+            <p class="stat-value">{{ request.user.points }} pt</p>
+        </div>
+        <div class="stat-box">
+            <p class="stat-label">보유 크레딧</p>
+            <p class="stat-value blue">₩{{ request.user.credits }}</p>
+        </div>
+        <div class="stat-box">
+            <p class="stat-label">이번 달 지출</p>
+            <p class="stat-value">₩{{ this_month_spent }}</p>
+        </div>
+    </div>
+
+    <!-- 아이템 그리드 -->
+    <p class="section-title">Items</p>
+    <div class="item-grid">
+        {% for item in items %}
+        <div class="item-card">
+
+            {% if item.image %}
+                <img src="{{ item.image.url }}" alt="{{ item.name }}" class="item-icon">
+            {% else %}
+                <div class="item-icon-placeholder"></div>
+            {% endif %}
+
+            <p class="item-name">{{ item.name }}</p>
+
+            {% if item.description %}
+                <p class="item-desc">{{ item.description }}</p>
+            {% endif %}
+
+            <div class="badge-row">
+                <span class="badge badge-pt">{{ item.price_points }} pt</span>
+                {% if item.item_type == 'credit' and item.credit_amount %}
+                    <span class="badge badge-cr">+₩{{ item.credit_amount }}</span>
+                {% elif item.item_type == 'inventory' %}
+                    <span class="badge badge-inv">인벤토리</span>
+                {% endif %}
+            </div>
+
+            <form method="post" action="{% url 'shop:buy_item' item.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn-buy">구매</button>
+            </form>
+
+            {% if request.user.is_staff %}
+            <form method="post" action="{% url 'shop:delete_item' item.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn-delete"
+                        onclick="return confirm('{{ item.name }}을(를) 삭제할까요?')">
+                    삭제
+                </button>
+            </form>
+            {% endif %}
+        </div>
+        {% empty %}
+            <p style="color:#888;font-size:14px;">등록된 아이템이 없어요.</p>
+        {% endfor %}
+    </div>
+
+    <!-- 관리자 전용: 아이템 추가 -->
+    {% if request.user.is_staff %}
+    <p class="section-title">관리자 — 아이템 추가</p>
+    <div class="add-item-form">
+        <p class="add-title">새 아이템 등록</p>
+        <form method="post" action="{% url 'shop:add_item' %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="add-item-grid">
+                <input type="text" name="name" placeholder="아이템 이름" required>
+                <input type="text" name="description" placeholder="설명">
+                <input type="number" name="price_points" placeholder="필요 포인트" min="1" required>
+                <input type="number" name="credit_amount" placeholder="크레딧 금액 (크레딧권만)" min="1">
+            </div>
+            <div class="add-item-extra">
+                <label class="add-label">아이템 타입</label>
+                <select name="item_type" id="item-type-select" onchange="toggleCreditField(this.value)">
+                    <option value="credit">크레딧권</option>
+                    <option value="inventory">인벤토리 아이템</option>
+                </select>
+                <label class="add-label" style="margin-top:10px">아이콘 이미지 (PNG / WebP / GIF)</label>
+                <input type="file" name="image" accept=".png,.webp,.gif,.jpg,.jpeg">
+            </div>
+            <button type="submit" class="btn-add-item">등록</button>
+        </form>
+    </div>
+    {% endif %}
+
+    <!-- 내역 + 크레딧 정산 버튼 -->
+    <div class="spend-bar">
+        <p class="section-title" style="margin:0">최근 내역</p>
+        <button class="btn-spend" onclick="openModal()">크레딧 사용 정산</button>
+    </div>
+
+    <table class="log-table">
+        <thead>
+            <tr>
+                <th style="width:20%">날짜</th>
+                <th style="width:35%">내용</th>
+                <th style="width:20%">카테고리</th>
+                <th style="width:25%;text-align:right">금액</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in credit_logs %}
+            <tr>
+                <td>{{ log.spent_at }}</td>
+                <td>{{ log.memo|default:"—" }}</td>
+                <td>{{ log.get_category_display }}</td>
+                <td class="amount-minus">-₩{{ log.amount }}</td>
+            </tr>
+            {% endfor %}
+            {% for purchase in recent_purchases %}
+            <tr>
+                <td>{{ purchase.purchased_at|date:"Y-m-d" }}</td>
+                <td>{{ purchase.item.name }} 구매</td>
+                <td>—</td>
+                <td class="{% if purchase.credits_gained > 0 %}amount-plus{% endif %}">
+                    {% if purchase.credits_gained > 0 %}+₩{{ purchase.credits_gained }}{% else %}—{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            {% if not credit_logs and not recent_purchases %}
+            <tr>
+                <td colspan="4" style="color:#aaa;text-align:center;padding:1.5rem 0">내역이 없어요.</td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+
+    <div class="footer-link-container">
+        <a href="{% url 'index' %}" class="return-link">← RETURN TO BASE (메인으로)</a>
+    </div>
+
+</div>
+
+<!-- 크레딧 정산 모달 -->
+<div class="modal-backdrop" id="spend-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2 id="modal-title">크레딧 사용 정산</h2>
+            <button class="modal-close" onclick="closeModal()" aria-label="닫기">✕</button>
+        </div>
+        <form method="post" action="{% url 'shop:spend_credit' %}">
+            {% csrf_token %}
+            <div class="modal-field">
+                <label for="amount">사용 금액 (원)</label>
+                <input type="number" id="amount" name="amount" placeholder="예: 15000" min="1" required>
+            </div>
+            <div class="modal-field">
+                <label for="category">카테고리</label>
+                <select id="category" name="category">
+                    <option value="game">게임</option>
+                    <option value="book">책</option>
+                    <option value="hobby">취미</option>
+                    <option value="other">기타</option>
+                </select>
+            </div>
+            <div class="modal-field">
+                <label for="memo">메모</label>
+                <input type="text" id="memo" name="memo" placeholder="예: 스팀 게임 구매">
+            </div>
+            <div class="modal-field">
+                <label for="spent_at">지출 날짜</label>
+                <input type="date" id="spent_at" name="spent_at" required>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-modal-cancel" onclick="closeModal()">취소</button>
+                <button type="submit" class="btn-modal-confirm">차감하기</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+const modal = document.getElementById('spend-modal');
+
+function openModal() {
+    document.getElementById('spent_at').value = new Date().toISOString().split('T')[0];
+    modal.classList.add('active');
+}
+
+function closeModal() {
+    modal.classList.remove('active');
+}
+
+modal.addEventListener('click', function(e) {
+    if (e.target === modal) closeModal();
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeModal();
+});
+
+// 타입이 인벤토리면 크레딧 금액 입력란 비활성화
+function toggleCreditField(type) {
+    const creditInput = document.querySelector('input[name="credit_amount"]');
+    if (type === 'inventory') {
+        creditInput.value = '';
+        creditInput.disabled = true;
+        creditInput.placeholder = '인벤토리 아이템은 해당 없음';
+    } else {
+        creditInput.disabled = false;
+        creditInput.placeholder = '크레딧 금액 (크레딧권만)';
+    }
+}
+</script>
+</body>
+</html>

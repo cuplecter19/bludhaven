@@ -1,0 +1,64 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WORDS | TOYBOX</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'core/css/index.css' %}">
+    <link rel="stylesheet" href="{% static 'leitner/css/dashboard.css' %}">
+    <link rel="stylesheet" href="{% static 'leitner/css/word_list.css' %}">
+</head>
+<body>
+<div class="main-container">
+    <h1 class="dashboard-title">MY Words</h1>
+
+    <!-- 검색 바 -->
+    <form class="search-form" method="get">
+        <input type="text" name="search" class="search-input" 
+               placeholder="단어 또는 뜻으로 검색..." value="{{ search_query }}">
+        <button type="submit" class="btn-action" style="padding: 0 20px; font-size: 1rem;">SEARCH</button>
+    </form>
+
+    {% if cards %}
+    <table class="word-list-table">
+        <thead>
+            <tr>
+                <th>WORD</th>
+                <th>MEANING</th>
+                <th>LEVEL</th>
+                <th>NEXT REVIEW</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for card in cards %}
+            <tr>
+                <td style="font-weight: bold; color: white;">{{ card.sense.word.word }}</td>
+                <td style="color: #ccc;">{{ card.sense.meaning }}</td>
+                <td>
+                    <span class="box-badge box-{{ card.box_number }}">
+                        BOX {{ card.box_number }}
+                    </span>
+                </td>
+                <td style="font-size: 0.9rem; color: #888;">
+                    {% if card.box_number == 5 %}
+                        MASTERED (졸업)
+                    {% else %}
+                        {{ card.next_review_at }}
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="stat-box" style="width: 100%; max-width: 900px;">
+        <p>단어장이 비어있습니다. 단어를 등록하거나 학습을 시작하세요!</p>
+    </div>
+    {% endif %}
+
+    <div class="footer-link-container">
+        <a href="{% url 'leitner:dashboard' %}" class="return-link">← RETURN TO HUB</a>
+    </div>
+</div>
+</body>
+</html>

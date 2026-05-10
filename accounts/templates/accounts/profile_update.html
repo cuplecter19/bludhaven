@@ -1,0 +1,91 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PROFILE CHECK | TOYBOX</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'accounts/css/signup.css' %}"> <!-- 기존 CSS 재활용 -->
+    <style>
+        /* 프로필 전용 추가 스타일 */
+        .info-label { color: var(--nw-blue); font-size: 1.2rem; margin-bottom: 5px; display: block; }
+        .read-only-box { 
+            background: #222; border: 2px solid #333; padding: 10px; 
+            margin-bottom: 20px; color: #888; font-family: sans-serif; 
+        }
+        .btn-group { display: flex; gap: 10px; margin-top: 20px; }
+        .btn-cancel { 
+            background: #444; text-decoration: none; display: flex; 
+            justify-content: center; align-items: center; color: white;
+            clip-path: polygon(0% 0%, 95% 0%, 100% 100%, 5% 100%);
+        }
+        select {
+            width: 100%; padding: 10px; background: #222; color: white;
+            border: 2px solid #444; margin-bottom: 20px;
+        }
+        .msg-box { color: black; border: 2px solid black; padding: 10px; margin-bottom: 20px; font-weight: bold; }
+        .msg-success { background: var(--green); }
+        .msg-error { background: var(--yellow); }
+    </style>
+</head>
+<body>
+    <div class="comic-box">
+        <h2>HERO STATUS</h2>
+
+        <!-- 에러/성공 메시지 출력 -->
+        {% if messages %}
+            {% for message in messages %}
+                <div class="msg-box {% if message.tags == 'success' %}msg-success{% else %}msg-error{% endif %}">
+                  {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <span class="info-label">PROFILE IMAGE</span>
+                <div class="form-group" style="background: #222; padding: 15px; border: 2px solid #444; margin-bottom: 20px;">
+    
+                    {% if user.profile_image %}
+                        <!-- 이미지가 있을 때: 보여주고, 삭제 체크박스도 제공 -->
+                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
+                            <img src="{{ user.profile_image.url }}" style="width: 80px; height: 80px; border-radius: 50%; border: 2px solid var(--nw-blue); object-fit: cover;">
+            
+                            <label style="color: #ff4444; font-family: sans-serif; cursor: pointer;">
+                                <input type="checkbox" name="delete_image" value="yes"> 🗑️ REMOVE IMAGE
+                            </label>
+                        </div>
+                    {% else %}
+                        <!-- 이미지가 없을 때: 기본 아이콘 표시 -->
+                        <div style="width: 80px; height: 80px; border-radius: 50%; background: #444; border: 2px solid #666; margin-bottom: 10px; display: flex; justify-content: center; align-items: center; color: #888; font-family: sans-serif; font-size: 0.8rem;">NO IMAGE</div>
+                    {% endif %}
+
+                    <!-- 공통: 새 이미지 업로드 버튼 -->
+                    <input type="file" name="profile_image" style="background: none; border: none; padding: 0;">
+                </div>
+            
+            <span class="info-label">ID</span>
+            <div class="read-only-box">{{ user.username }} (변경 불가)</div>
+
+            <span class="info-label">CURRENT POINTS</span>
+            <div class="read-only-box">🪙 {{ user.points }} PT</div>
+
+            <span class="info-label">NICKNAME</span>
+            <div class="form-group">
+                <input type="text" name="nickname" value="{{ user.nickname }}" required>
+            </div>
+
+            <span class="info-label">UI THEME</span>
+            <select name="theme_preference">
+                <option value="default" {% if user.theme_preference == 'default' %}selected{% endif %}>Blüdhaven Night (Blue)</option>
+                <option value="dark" {% if user.theme_preference == 'dark' %}selected{% endif %}>Gotham Shadows (Black)</option>
+            </select>
+
+            <div class="btn-group">
+                <button type="submit">UPDATE STATUS</button>
+                <a href="{% url 'index' %}" class="toy btn-cancel" style="padding: 0 20px; margin-top: 0; font-family: 'Bangers'; font-size: 1.2rem;">CANCEL</a>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

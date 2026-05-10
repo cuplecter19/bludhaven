@@ -1,0 +1,483 @@
+/* shop/static/shop/css/shop.css */
+
+:root {
+    --nw-blue: #1a6fbe;
+    --nw-blue-dark: #0c447c;
+    --nw-blue-light: #e6f1fb;
+    --nw-blue-border: #378add;
+}
+
+
+/* ── 레이아웃 ── */
+
+.shop-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+}
+
+.shop-title {
+    font-family: 'Bangers', cursive;
+    font-size: 2rem;
+    letter-spacing: 3px;
+    color: var(--nw-blue);
+    margin: 0 0 1.5rem;
+}
+
+
+/* ── 스탯 헤더 ── */
+
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 2.5rem;
+}
+
+.stat-box {
+    background: #f4f4f4;
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.stat-box .stat-label {
+    font-size: 12px;
+    color: #888;
+    margin: 0 0 6px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.stat-box .stat-value {
+    font-size: 24px;
+    font-weight: 500;
+    color: #1a1a1a;
+    margin: 0;
+}
+
+.stat-box .stat-value.blue {
+    color: var(--nw-blue);
+}
+
+
+/* ── 섹션 ── */
+
+.section-title {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #888;
+    margin: 0 0 12px;
+}
+
+
+/* ── 아이템 그리드 ── */
+
+.item-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 2.5rem;
+}
+
+.item-card {
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    border-radius: 12px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* 아이템 아이콘 */
+.item-icon {
+    width: 56px;
+    height: 56px;
+    object-fit: contain;
+    border-radius: 8px;
+    background: #f4f4f4;
+}
+
+.item-icon-placeholder {
+    width: 56px;
+    height: 56px;
+    border-radius: 8px;
+    background: #f0f0f0;
+    border: 1px dashed #ccc;
+}
+
+.item-card .item-name {
+    font-size: 16px;
+    font-weight: 500;
+    color: #1a1a1a;
+    margin: 0;
+}
+
+.item-card .item-desc {
+    font-size: 13px;
+    color: #666;
+    flex: 1;
+    margin: 0;
+}
+
+.badge-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.badge {
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-weight: 500;
+}
+
+.badge-pt {
+    background: var(--nw-blue-light);
+    color: var(--nw-blue-dark);
+}
+
+.badge-cr {
+    background: #e1f5ee;
+    color: #085041;
+}
+
+.badge-inv {
+    background: #eeedfe;
+    color: #3c3489;
+}
+
+.btn-buy {
+    margin-top: 4px;
+    width: 100%;
+    padding: 9px;
+    border-radius: 8px;
+    background: var(--nw-blue);
+    border: none;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.btn-buy:hover {
+    background: var(--nw-blue-dark);
+}
+
+.btn-delete {
+    width: 100%;
+    padding: 6px;
+    border-radius: 8px;
+    background: none;
+    border: 1px solid #e5e5e5;
+    color: #999;
+    font-size: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+}
+
+.btn-delete:hover {
+    border-color: #e24b4a;
+    color: #a32d2d;
+}
+
+
+/* ── 관리자 아이템 추가 폼 ── */
+
+.add-item-form {
+    background: #f9f9f7;
+    border: 1px dashed #ccc;
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-bottom: 2.5rem;
+}
+
+.add-item-form .add-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: #1a1a1a;
+    margin: 0 0 12px;
+}
+
+.add-item-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.add-item-grid input {
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    width: 100%;
+    box-sizing: border-box;
+    background: #fff;
+    color: #1a1a1a;
+}
+
+.add-item-grid input:focus {
+    outline: none;
+    border-color: var(--nw-blue-border);
+}
+
+.add-item-extra {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.add-item-extra select,
+.add-item-extra input[type="file"] {
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    background: #fff;
+    color: #1a1a1a;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.add-label {
+    font-size: 12px;
+    color: #888;
+    letter-spacing: 0.5px;
+}
+
+.btn-add-item {
+    padding: 8px 20px;
+    border: 1px solid var(--nw-blue-border);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--nw-blue);
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.btn-add-item:hover {
+    background: var(--nw-blue-light);
+}
+
+
+/* ── 크레딧 정산 버튼 ── */
+
+.spend-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.btn-spend {
+    padding: 8px 18px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fff;
+    color: #1a1a1a;
+    font-size: 14px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+}
+
+.btn-spend:hover {
+    border-color: var(--nw-blue-border);
+    color: var(--nw-blue);
+}
+
+
+/* ── 내역 테이블 ── */
+
+.log-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    margin-bottom: 2.5rem;
+    table-layout: fixed;
+}
+
+.log-table th {
+    text-align: left;
+    color: #888;
+    font-weight: 400;
+    font-size: 12px;
+    padding: 6px 0;
+    border-bottom: 1px solid #eee;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.log-table td {
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f0f0;
+    color: #1a1a1a;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.amount-plus {
+    color: #085041;
+    font-weight: 500;
+    text-align: right;
+}
+
+.amount-minus {
+    color: #a32d2d;
+    font-weight: 500;
+    text-align: right;
+}
+
+
+/* ── 모달 ── */
+
+.modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-backdrop.active {
+    display: flex;
+}
+
+.modal-box {
+    background: #fff;
+    border-radius: 14px;
+    padding: 1.75rem;
+    width: 100%;
+    max-width: 400px;
+    margin: 1rem;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.25rem;
+}
+
+.modal-header h2 {
+    font-size: 16px;
+    font-weight: 500;
+    color: #1a1a1a;
+    margin: 0;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: #999;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.modal-field {
+    margin-bottom: 14px;
+}
+
+.modal-field label {
+    display: block;
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.modal-field input,
+.modal-field select {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    box-sizing: border-box;
+    color: #1a1a1a;
+    background: #fff;
+}
+
+.modal-field input:focus,
+.modal-field select:focus {
+    outline: none;
+    border-color: var(--nw-blue-border);
+}
+
+.modal-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 1.25rem;
+}
+
+.btn-modal-cancel {
+    flex: 1;
+    padding: 10px;
+    background: #f4f4f4;
+    border: none;
+    border-radius: 8px;
+    color: #666;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.btn-modal-confirm {
+    flex: 1;
+    padding: 10px;
+    background: var(--nw-blue);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.btn-modal-confirm:hover {
+    background: var(--nw-blue-dark);
+}
+
+
+/* ── 메시지 ── */
+
+.msg-box {
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 1rem;
+    font-size: 14px;
+}
+
+.msg-success {
+    background: #e1f5ee;
+    color: #085041;
+    border: 1px solid #9fe1cb;
+}
+
+.msg-error {
+    background: #fcebeb;
+    color: #791f1f;
+    border: 1px solid #f7c1c1;
+}
+
+.footer-link-container {
+    margin-top: 2rem;
+}
+
+.return-link {
+    font-size: 14px;
+    color: #888;
+    text-decoration: none;
+}
+
+.return-link:hover {
+    color: var(--nw-blue);
+}

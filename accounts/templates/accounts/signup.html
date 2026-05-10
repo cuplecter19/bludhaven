@@ -1,0 +1,35 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>JOIN THE TOYBOX!</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'accounts/css/signup.css' %}">
+</head>
+<body>
+    <div class="comic-box">
+        <h2>NEW HERO?!</h2>
+            {% if messages %}
+                {% for message in messages %}
+                    <div style="background: var(--yellow); color: black; border: 2px solid black; padding: 10px; margin-bottom: 20px; font-family: sans-serif; font-weight: bold; box-shadow: 5px 5px 0px black;">
+                        ⚠ {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <input type="text" name="username" placeholder="IDENTIFY YOURSELF (ID)" required>
+            </div>
+            <div class="form-group">
+                <input type="password" name="password" placeholder="SECRET CODE (PW)" required>
+            </div>
+            <div class="form-group">
+                <input type="text" name="nickname" placeholder="HERO NAME (NICKNAME)">
+            </div>
+            <button type="submit">JOIN THE BOX!</button>
+        </form>
+        <p class="footer-text">ALREADY A MEMBER? <a href="#">LOG IN HERE!</a></p>
+    </div>
+</body>
+</html>

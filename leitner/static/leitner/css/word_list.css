@@ -1,0 +1,54 @@
+/* leitner/static/leitner/css/word_list.css */
+
+.word-list-table {
+    width: 100%;
+    max-width: 900px;
+    border-collapse: collapse;
+    background: #111;
+    border: 2px solid var(--nw-blue);
+    margin-top: 20px;
+}
+
+.word-list-table th, .word-list-table td {
+    padding: 15px;
+    text-align: left;
+    border-bottom: 1px solid #333;
+}
+
+.word-list-table th {
+    background: var(--nw-blue);
+    color: white;
+    font-family: 'Bangers';
+    font-size: 1.2rem;
+    letter-spacing: 1px;
+}
+
+.box-badge {
+    padding: 5px 10px;
+    border-radius: 3px;
+    font-weight: bold;
+    font-size: 0.8rem;
+    background: #333;
+    color: white;
+}
+
+.box-1 { border: 1px solid #ff4444; color: #ff4444; }
+.box-5 { border: 1px solid #00ff00; color: #00ff00; }
+
+.search-form {
+    width: 100%;
+    max-width: 900px;
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.search-input {
+    flex: 1;
+    background: #222;
+    border: 2px solid #444;
+    padding: 10px 15px;
+    color: white;
+}
+
+.search-input:focus { border-color: var(--nw-blue); outline: none; }

@@ -1,0 +1,200 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LEITNER BOX | BLÜDHAVEN</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'core/css/index.css' %}">
+    <link rel="stylesheet" href="{% static 'leitner/css/dashboard.css' %}">
+</head>
+<body>
+<div class="main-container">
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="msg-box {% if message.tags == 'success' %}msg-success{% else %}msg-error{% endif %}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <h1 class="dashboard-title">LEITNER TRAINING HUB</h1>
+
+    <div class="stat-grid">
+        <div class="stat-box">
+            <h3>TARGETS TODAY</h3>
+            <div class="stat-number">{{ due_cards_count }}</div>
+            <p>오늘 복습해야 할 단어</p>
+        </div>
+        <div class="stat-box">
+            <h3>TOTAL WORDS</h3>
+            <div class="stat-number">{{ total_cards_count }}</div>
+            <p>내 학습장에 있는 단어</p>
+        </div>
+    </div>
+
+    {% if quiz_card %}
+    <div class="quiz-card" id="quiz-card"
+     data-card-id="{{ quiz_card.id }}"
+     data-submit-url="{% url 'leitner:submit_answer' %}"
+     data-hint-en="{{ quiz_card.sense.example_en|default:'' }}"
+     data-hint-ko="{{ quiz_card.sense.example_ko|default:'' }}">
+
+        <div class="quiz-progress">
+            <span>Box {{ quiz_card.box_number }} &middot; 오늘 남은 카드 {{ due_cards_count }}장</span>
+        </div>
+
+        <div class="quiz-word">{{ quiz_card.sense.word.word }}</div>
+
+        {% if quiz_card.sense.word.pronunciation %}
+            <div class="quiz-pronunciation">{{ quiz_card.sense.word.pronunciation }}</div>
+        {% endif %}
+        {% if quiz_card.sense.word.part_of_speech %}
+            <div class="quiz-pos">{{ quiz_card.sense.word.part_of_speech }}</div>
+        {% endif %}
+
+        <!-- 힌트: 처음엔 숨겨져 있음 -->
+        <div class="hint-area" id="hint-area">
+            <button class="btn-hint" onclick="showHint()">힌트 보기</button>
+        </div>
+
+        <!-- 답 입력 전: 입력창 -->
+        <div id="answer-input-area">
+            <input type="text" id="answer-input" class="answer-input"
+                   placeholder="뜻을 한국어로 입력하세요"
+                   onkeydown="if(event.key==='Enter') revealAnswer()">
+            <button class="btn-action" onclick="revealAnswer()">확인</button>
+        </div>
+
+        <!-- 답 확인 후: 정답 표시 + 맞음/틀림 버튼 (처음엔 숨김) -->
+        <div id="answer-reveal-area" style="display:none">
+            <div class="answer-reveal">
+                <div class="answer-meaning">{{ quiz_card.sense.meaning }}</div>
+                {% if quiz_card.sense.example_en %}
+                    <div class="example-en">{{ quiz_card.sense.example_en }}</div>
+                    <div class="example-ko">{{ quiz_card.sense.example_ko }}</div>
+                {% endif %}
+            </div>
+            <div class="verdict-buttons">
+                <button class="btn-correct" onclick="submitAnswer(true)">맞았어요 ✓</button>
+                <button class="btn-wrong" onclick="submitAnswer(false)">틀렸어요 ✗</button>
+            </div>
+        </div>
+
+        <!-- 제출 후 결과 (처음엔 숨김) -->
+        <div id="result-area" style="display:none"></div>
+    </div>
+
+    {% else %}
+    <div class="stat-box quiz-empty">
+        <p>오늘 복습할 단어가 없어요. 잘 하셨습니다!</p>
+    </div>
+    {% endif %}
+
+    {% if difficult_cards %}
+    <div class="difficult-section">
+        <h3>자주 틀리는 단어</h3>
+        {% for card in difficult_cards %}
+        <div class="difficult-item">
+            <span>{{ card.sense.word.word }}</span>
+            <span class="wrong-badge">오답 {{ card.wrong_count }}회</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="action-grid">
+        <a href="{% url 'leitner:word_list' %}" class="btn-action btn-secondary">VIEW WORDS</a>
+
+        <form method="post" action="{% url 'leitner:upload_words' %}"
+              enctype="multipart/form-data" class="stat-box upload-form">
+            {% csrf_token %}
+            <span class="upload-help-text">새로운 단어 (CSV) 업로드</span>
+            <input type="file" name="csv_file" accept=".csv" required class="file-input">
+            <button type="submit" class="btn-action btn-upload">UPLOAD CSV</button>
+        </form>
+    </div>
+
+    <div class="footer-link-container">
+        <a href="{% url 'index' %}" class="return-link">← RETURN TO BASE (메인으로)</a>
+    </div>
+</div>
+
+<script>
+const quizCardEl = document.getElementById('quiz-card');
+const QUIZ_URL = quizCardEl?.dataset.submitUrl ?? null;
+const CSRF_TOKEN = '{{ csrf_token }}';
+let startTime = Date.now();  // 페이지 로드(단어 노출) 시점
+
+function showHint() {
+    const hintArea = document.getElementById('hint-area');
+    const en = quizCardEl.dataset.hintEn;
+    const ko = quizCardEl.dataset.hintKo;
+
+    if (en) {
+        hintArea.innerHTML = `
+            <div class="hint-box">
+                <div class="hint-label">예문 힌트</div>
+                <div>${en}</div>
+                <div class="hint-ko">${ko}</div>
+            </div>`;
+    } else {
+        hintArea.innerHTML = '<div class="hint-box">등록된 예문이 없어요.</div>';
+    }
+}
+
+function revealAnswer() {
+    startTime = Date.now();  // 답 확인 누른 시점으로 갱신
+    document.getElementById('answer-input-area').style.display = 'none';
+    document.getElementById('answer-reveal-area').style.display = 'block';
+}
+
+function submitAnswer(isCorrect) {
+    const responseMs = Date.now() - startTime;
+    document.getElementById('answer-reveal-area').style.display = 'none';
+
+    fetch(QUIZ_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF_TOKEN,
+        },
+        body: JSON.stringify({
+            card_id: quizCardEl.dataset.cardId,
+            is_correct: isCorrect,
+            response_ms: responseMs,
+        }),
+    })
+    .then(res => {
+        if (!res.ok) throw new Error('서버 오류');
+        return res.json();
+    })
+    .then(data => {
+        const resultArea = document.getElementById('result-area');
+        resultArea.style.display = 'block';
+
+        if (isCorrect) {
+            resultArea.innerHTML = `
+                <div class="result-correct">
+                    ✓ 정답! +${data.points_earned}pt<br>
+                    <small>다음 복습: ${data.next_review_at} (Box ${data.box_after})</small>
+                </div>
+                <button class="btn-action" onclick="location.reload()">다음 단어 →</button>`;
+        } else {
+            resultArea.innerHTML = `
+                <div class="result-wrong">
+                    ✗ 다시 Box 1로. 조금만 더 해봐요.<br>
+                    <small>내일 다시 복습해요</small>
+                </div>
+                <button class="btn-action" onclick="location.reload()">다음 단어 →</button>`;
+        }
+    })
+    .catch(() => {
+        const resultArea = document.getElementById('result-area');
+        resultArea.style.display = 'block';
+        resultArea.innerHTML = '<div class="result-wrong">제출 중 오류가 발생했어요. 새로고침 후 다시 시도해주세요.</div>';
+    });
+}
+</script>
+</body>
+</html>
