@@ -1,13 +1,10 @@
 from django.db import migrations
-import uuid
 
 def insert_default_companion(apps, schema_editor):
     CompanionPreset = apps.get_model('scheduler', 'CompanionPreset')
-    DEFAULT_PK = uuid.UUID('00000000-0000-0000-0000-000000000001')
-    if CompanionPreset.objects.filter(pk=DEFAULT_PK).exists():
+    if CompanionPreset.objects.filter(is_default=True, name='루미').exists():
         return
     CompanionPreset.objects.create(
-        id=DEFAULT_PK,
         name='루미',
         animal_emoji='🦦',
         theme_color='#1565C0',
@@ -139,7 +136,7 @@ def insert_default_companion(apps, schema_editor):
 def remove_default_companion(apps, schema_editor):
     CompanionPreset = apps.get_model('scheduler', 'CompanionPreset')
     CompanionPreset.objects.filter(
-        pk=uuid.UUID('00000000-0000-0000-0000-000000000001')
+        is_default=True, name='루미'
     ).delete()
 
 class Migration(migrations.Migration):

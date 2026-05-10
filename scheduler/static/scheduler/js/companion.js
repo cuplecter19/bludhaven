@@ -4,6 +4,7 @@ import {
   createCompanionPreset,
   deleteCompanionPreset,
   activateCompanionPreset,
+  getActiveCompanion,
 } from './api.js';
 
 // ── 말풍선 ────────────────────────────────────────────────────────────────────
@@ -200,14 +201,11 @@ export async function onActivatePreset(presetId) {
   }
 
   const card = document.querySelector(`[data-preset-id="${presetId}"]`);
-  const avatar = document.getElementById('companion-avatar');
-  if (avatar && card) {
-    if (card.dataset.imageUrl) {
-      avatar.innerHTML = `<img src="${card.dataset.imageUrl}" alt=""
-        style="width:40px;height:40px;border-radius:50%;object-fit:cover;display:block">`;
-    } else {
-      avatar.textContent = card.dataset.emoji || '🦇';
-    }
+  if (card) {
+    updateAvatar({
+      image_url: card.dataset.imageUrl || null,
+      animal_emoji: card.dataset.emoji || '🦇',
+    });
   }
 
   closeCompanionModal();
@@ -297,9 +295,31 @@ export async function onSavePreset() {
 
 // ── 모달 ──────────────────────────────────────────────────────────────────────
 
+function openCompanionModal() {
+  const modal = document.getElementById('companion-modal');
+  const overlay = document.getElementById('companion-modal-overlay');
+  if (modal) modal.style.display = 'flex';
+  if (overlay) overlay.style.display = 'block';
+}
+
 function closeCompanionModal() {
   const modal = document.getElementById('companion-modal');
+  const overlay = document.getElementById('companion-modal-overlay');
   if (modal) modal.style.display = 'none';
+  if (overlay) overlay.style.display = 'none';
+}
+
+// ── 아바타 업데이트 헬퍼 ──────────────────────────────────────────────────────
+
+function updateAvatar(preset) {
+  const avatar = document.getElementById('companion-avatar');
+  if (!avatar) return;
+  if (preset?.image_url) {
+    avatar.innerHTML = `<img src="${preset.image_url}" alt="${preset.name ?? ''}"
+      style="width:40px;height:40px;border-radius:50%;object-fit:cover;display:block">`;
+  } else {
+    avatar.textContent = preset?.animal_emoji || '🦇';
+  }
 }
 
 export function initCompanionModal() {
@@ -311,7 +331,7 @@ export function initCompanionModal() {
 
   if (avatar && modal) {
     avatar.addEventListener('click', () => {
-      modal.style.display = 'block';
+      openCompanionModal();
       loadPresetList();
     });
   }
@@ -374,6 +394,13 @@ export function initCompanionModal() {
       document.querySelectorAll('[data-tab-target]').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
     });
+  });
+
+  // 현재 활성 동반자를 불러와서 아바타에 표시
+  getActiveCompanion().then(data => {
+    if (data?.preset) updateAvatar(data.preset);
+  }).catch(err => {
+    console.warn('활성 동반자를 불러오지 못했습니다:', err);
   });
 }
 
