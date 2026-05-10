@@ -1,0 +1,164 @@
+{% extends "scheduler/base.html" %}
+{% load static %}
+
+{% block title %}반복 일정 · NightWing{% endblock %}
+{% block nav_recurring %}active{% endblock %}
+
+{% block content %}
+<p class="section-title" style="margin-top:16px">반복 일정 등록</p>
+
+<div class="card recurring-form">
+  <div class="form-group">
+    <label class="form-label" for="rt-title">태스크명</label>
+    <input class="form-input" id="rt-title" type="text" placeholder="예: 러닝 30분" maxlength="200">
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div class="form-group">
+      <label class="form-label" for="rt-duration">예상 시간 (분)</label>
+      <input class="form-input" id="rt-duration" type="number" min="1" max="480" placeholder="30">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="rt-points">포인트</label>
+      <input class="form-input" id="rt-points" type="number" min="0" placeholder="10" value="10">
+    </div>
+  </div>
+  <div class="form-group">
+    <label class="form-label">반복 요일</label>
+    <div class="day-checkboxes">
+      {% for day in "MON,TUE,WED,THU,FRI,SAT,SUN"|split:"," %}
+      {% endfor %}
+      <label class="day-checkbox-label"><input type="checkbox" name="days" value="MON"> 월</label>
+      <label class="day-checkbox-label"><input type="checkbox" name="days" value="TUE"> 화</label>
+      <label class="day-checkbox-label"><input type="checkbox" name="days" value="WED"> 수</label>
+      <label class="day-checkbox-label"><input type="checkbox" name="days" value="THU"> 목</label>
+      <label class="day-checkbox-label"><input type="checkbox" name="days" value="FRI"> 금</label>
+      <label class="day-checkbox-label"><input type="checkbox" name="days" value="SAT"> 토</label>
+      <label class="day-checkbox-label"><input type="checkbox" name="days" value="SUN"> 일</label>
+    </div>
+  </div>
+  <div class="form-group">
+    <label class="form-label" for="rt-time">선호 시간</label>
+    <input class="form-input" id="rt-time" type="time">
+  </div>
+  <button class="btn-primary" id="add-recurring-btn" type="button" style="width:100%">
+    <i class="fa-solid fa-plus"></i> 반복 일정 추가
+  </button>
+</div>
+
+<p class="section-title">등록된 반복 일정</p>
+<ul id="recurring-list"></ul>
+
+<div class="empty-state" id="recurring-empty" hidden>
+  <div class="empty-state__icon">🔁</div>
+  <p class="empty-state__title">반복 일정이 없어요</p>
+  <p class="empty-state__desc">매일 반복되는 태스크를 등록하면 오늘 계획에 자동으로 추가돼요.</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module">
+  import { getRecurringTasks, createRecurringTask, deleteRecurringTask } from "{% static 'scheduler/js/api.js' %}";
+
+  const DAY_KO = { MON:'월', TUE:'화', WED:'수', THU:'목', FRI:'금', SAT:'토', SUN:'일' };
+
+  function renderItem(rt) {
+    const li = document.createElement('li');
+    li.id = `rt-${rt.id}`;
+    li.className = 'recurring-item';
+
+    const info = document.createElement('div');
+    info.className = 'recurring-info';
+
+    const title = document.createElement('div');
+    title.className = 'recurring-title';
+    title.textContent = rt.title;
+
+    const days = document.createElement('div');
+    days.className = 'recurring-days';
+    rt.recurrence_rule.split(',').forEach(d => {
+      const badge = document.createElement('span');
+      badge.className = 'tag-badge';
+      badge.textContent = DAY_KO[d.trim()] ?? d;
+      days.append(badge);
+    });
+
+    const meta = document.createElement('div');
+    meta.className = 'recurring-meta';
+    const parts = [];
+    if (rt.planned_duration_min) parts.push(`${rt.planned_duration_min}분`);
+    if (rt.point_reward)        parts.push(`+${rt.point_reward}pt`);
+    if (rt.preferred_time)      parts.push(rt.preferred_time.slice(0, 5));
+    meta.textContent = parts.join(' · ');
+
+    info.append(title, days, meta);
+
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'btn-danger';
+    del.innerHTML = '<i class="fa-solid fa-trash"></i>';
+    del.addEventListener('click', async () => {
+      if (!confirm(`"${rt.title}" 반복 일정을 삭제할까요?`)) return;
+      try {
+        await deleteRecurringTask(rt.id);
+        li.remove();
+        checkEmpty();
+      } catch { /* 에러는 api.js에서 처리 */ }
+    });
+
+    li.append(info, del);
+    return li;
+  }
+
+  function checkEmpty() {
+    const list = document.getElementById('recurring-list');
+    const empty = document.getElementById('recurring-empty');
+    if (!list || !empty) return;
+    empty.hidden = list.children.length > 0;
+  }
+
+  async function loadList() {
+    let items;
+    try { items = await getRecurringTasks(); } catch { return; }
+
+    const list = document.getElementById('recurring-list');
+    list.innerHTML = '';
+    items.forEach(rt => list.append(renderItem(rt)));
+    checkEmpty();
+  }
+
+  document.getElementById('add-recurring-btn').addEventListener('click', async () => {
+    const title = document.getElementById('rt-title').value.trim();
+    const duration = document.getElementById('rt-duration').value;
+    const points = document.getElementById('rt-points').value;
+    const time = document.getElementById('rt-time').value;
+    const checkedDays = [...document.querySelectorAll('input[name="days"]:checked')]
+      .map(el => el.value);
+
+    if (!title) { alert('태스크명을 입력해 주세요.'); return; }
+    if (!checkedDays.length) { alert('반복 요일을 하나 이상 선택해 주세요.'); return; }
+
+    const data = {
+      title,
+      recurrence_rule: checkedDays.join(','),
+      planned_duration_min: duration ? parseInt(duration) : null,
+      point_reward: points ? parseInt(points) : 10,
+      preferred_time: time || null,
+    };
+
+    let rt;
+    try { rt = await createRecurringTask(data); } catch { return; }
+
+    document.getElementById('recurring-list').prepend(renderItem(rt));
+    checkEmpty();
+
+    // 폼 초기화
+    document.getElementById('rt-title').value = '';
+    document.getElementById('rt-duration').value = '';
+    document.getElementById('rt-points').value = '10';
+    document.getElementById('rt-time').value = '';
+    document.querySelectorAll('input[name="days"]:checked').forEach(el => { el.checked = false; });
+  });
+
+  document.addEventListener('DOMContentLoaded', loadList);
+</script>
+{% endblock %}

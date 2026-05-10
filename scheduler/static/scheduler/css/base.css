@@ -1,0 +1,477 @@
+/* ── CSS 변수 ──────────────────────────────────────────────────────────────── */
+:root {
+  --nw-blue:       #1565C0;
+  --nw-blue-light: #E3F0FF;
+  --nw-blue-dark:  #0D47A1;
+  --nw-accent:     #FFD600;
+  --nw-stripe:     #FFD600;
+
+  /* 라이트 모드 */
+  --bg:          #F4F8FF;
+  --surface:     #FFFFFF;
+  --text:        #1A1A2E;
+  --text-muted:  #556080;
+  --border:      #C8D8F0;
+  --shadow:      rgba(21, 101, 192, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:         #0D1528;
+    --surface:    #172040;
+    --text:       #E0EAFF;
+    --text-muted: #7A90BB;
+    --border:     #253660;
+    --shadow:     rgba(0, 0, 0, 0.4);
+  }
+}
+
+/* ── Reset ─────────────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
+               Arial, 'Noto Sans KR', sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding-bottom: 72px; /* bottom-nav 공간 */
+}
+
+a {
+  color: var(--nw-blue);
+  text-decoration: none;
+}
+a:hover { text-decoration: underline; }
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+ul { list-style: none; }
+
+img { max-width: 100%; display: block; }
+
+/* ── 레이아웃 ──────────────────────────────────────────────────────────────── */
+.container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+/* ── 탑바 ──────────────────────────────────────────────────────────────────── */
+.topbar {
+  background: var(--nw-blue-dark);
+  color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.topbar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 52px;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* 나이트윙 스트라이프 장식 */
+.nw-stripe {
+  display: inline-block;
+  width: 24px;
+  height: 5px;
+  background: var(--nw-accent);
+  border-radius: 2px;
+  transform: skewX(-12deg);
+  flex-shrink: 0;
+}
+
+.site-name {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── 동반자 영역 ────────────────────────────────────────────────────────────── */
+.companion-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px 0;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.avatar-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--nw-blue-light);
+  border: 2px solid var(--nw-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+.avatar-btn:hover { transform: scale(1.08); }
+
+.companion-bubble {
+  display: none;
+  background: var(--surface);
+  border: 1.5px solid var(--nw-blue-light);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: var(--text);
+  box-shadow: 0 2px 8px var(--shadow);
+  max-width: 300px;
+  position: relative;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.companion-bubble::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 12px;
+  border: 6px solid transparent;
+  border-right-color: var(--nw-blue-light);
+}
+
+/* ── 에러 배너 ─────────────────────────────────────────────────────────────── */
+.error-banner {
+  background: #FFF0F0;
+  border: 1.5px solid #FFBBBB;
+  color: #C0392B;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin: 12px 0 0;
+  font-size: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  .error-banner { background: #2A1010; border-color: #7A2020; color: #FF9999; }
+}
+
+/* ── 카드 ──────────────────────────────────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+/* ── 버튼 ──────────────────────────────────────────────────────────────────── */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 20px;
+  background: var(--nw-blue);
+  color: #fff;
+  border-radius: 10px;
+  font-weight: 600;
+  transition: background 0.15s;
+}
+.btn-primary:hover { background: var(--nw-blue-dark); }
+.btn-primary:disabled {
+  background: var(--border);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  background: transparent;
+  font-weight: 500;
+  transition: border-color 0.15s, background 0.15s;
+}
+.btn-ghost:hover { border-color: var(--nw-blue); background: var(--nw-blue-light); }
+
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1.5px solid #FFBBBB;
+  color: #C0392B;
+  font-size: 13px;
+  background: transparent;
+  transition: background 0.15s;
+}
+.btn-danger:hover { background: #FFF0F0; }
+
+/* ── 뱃지 ──────────────────────────────────────────────────────────────────── */
+.point-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: var(--nw-accent);
+  color: var(--nw-blue-dark);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.tag-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--nw-blue-light);
+  color: var(--nw-blue-dark);
+}
+
+/* ── 진행률 바 ─────────────────────────────────────────────────────────────── */
+.progress-bar {
+  height: 8px;
+  background: var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.progress-bar__fill {
+  height: 100%;
+  background: var(--nw-blue);
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+/* ── 모달 공통 ─────────────────────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(13, 71, 161, 0.4);
+  z-index: 200;
+  backdrop-filter: blur(2px);
+}
+
+.modal-box {
+  position: fixed;
+  inset: 0;
+  z-index: 201;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.modal-sheet {
+  pointer-events: all;
+  background: var(--surface);
+  border-radius: 20px 20px 0 0;
+  width: 100%;
+  max-width: 600px;
+  max-height: 92vh;
+  overflow-y: auto;
+  padding: 20px 20px 32px;
+  box-shadow: 0 -4px 24px var(--shadow);
+}
+
+.modal-handle {
+  width: 36px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 999px;
+  margin: 0 auto 16px;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.modal-title {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.modal-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 16px;
+}
+
+/* ── 탭 ────────────────────────────────────────────────────────────────────── */
+.tabs {
+  display: flex;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 16px;
+  gap: 4px;
+}
+
+.tab-btn {
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-muted);
+  border-radius: 8px 8px 0 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.15s;
+}
+.tab-btn.active {
+  color: var(--nw-blue);
+  border-bottom-color: var(--nw-blue);
+  font-weight: 700;
+}
+.tab-btn:disabled {
+  color: var(--border);
+  cursor: not-allowed;
+}
+
+/* ── 폼 요소 ───────────────────────────────────────────────────────────────── */
+.form-group {
+  margin-bottom: 14px;
+}
+.form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.form-input,
+.form-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font: inherit;
+  transition: border-color 0.15s;
+}
+.form-input:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: var(--nw-blue);
+}
+.form-textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+.form-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* ── 섹션 헤더 ─────────────────────────────────────────────────────────────── */
+.section-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 20px 0 10px;
+}
+
+/* ── 하단 내비게이션 ────────────────────────────────────────────────────────── */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  border-top: 1.5px solid var(--border);
+  display: flex;
+  z-index: 100;
+  height: 60px;
+}
+
+.nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.nav-item i { font-size: 18px; }
+.nav-item.active,
+.nav-item:hover { color: var(--nw-blue); }
+
+/* ── 빈 상태 ───────────────────────────────────────────────────────────────── */
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text-muted);
+}
+.empty-state__icon { font-size: 40px; margin-bottom: 12px; }
+.empty-state__title { font-size: 17px; font-weight: 600; margin-bottom: 8px; color: var(--text); }
+.empty-state__desc { font-size: 14px; margin-bottom: 20px; }
+
+/* ── 모달 에러/성공 메시지 ─────────────────────────────────────────────────── */
+.modal-error-msg {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+.modal-error-msg[data-type="error"] {
+  background: #FFF0F0;
+  border: 1.5px solid #FFBBBB;
+  color: #C0392B;
+}
+.modal-error-msg[data-type="success"] {
+  background: #F0FFF4;
+  border: 1.5px solid #AAEEBB;
+  color: #1A7A34;
+}
+@media (prefers-color-scheme: dark) {
+  .modal-error-msg[data-type="error"]   { background: #2A1010; border-color: #7A2020; color: #FF9999; }
+  .modal-error-msg[data-type="success"] { background: #0A2A14; border-color: #2A7A44; color: #88DD99; }
+}

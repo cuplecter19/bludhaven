@@ -1,0 +1,73 @@
+{% extends "scheduler/base.html" %}
+{% load static %}
+
+{% block title %}하루 결산 · NightWing{% endblock %}
+
+{% block content %}
+<div class="summary-header">
+  <h1 class="summary-title">오늘의 결산</h1>
+  <p class="summary-date" id="summary-date"></p>
+  <div class="summary-accent-bar"></div>
+</div>
+
+<div class="summary-grid" id="summary-grid">
+  <div class="metric-card">
+    <div class="metric-value" id="m-tasks">—</div>
+    <div class="metric-label">완료한 태스크</div>
+  </div>
+  <div class="metric-card accent">
+    <div class="metric-value" id="m-points">—</div>
+    <div class="metric-label">획득 포인트</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-value" id="m-focus">—</div>
+    <div class="metric-label">집중 시간 (분)</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-value" id="m-adherence">—</div>
+    <div class="metric-label">계획 일치율</div>
+  </div>
+</div>
+
+<div class="summary-actions">
+  <a href="{% url 'scheduler:history' %}" class="btn-ghost">
+    <i class="fa-regular fa-calendar"></i> 주간 기록 보기
+  </a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module">
+  import { getSummary } from "{% static 'scheduler/js/api.js' %}";
+  import { showDialogue } from "{% static 'scheduler/js/companion.js' %}";
+
+  const PLAN_ID = {{ plan_id }};
+
+  async function loadSummary() {
+    let data;
+    try {
+      data = await getSummary(PLAN_ID);
+    } catch {
+      const banner = document.getElementById('error-banner');
+      if (banner) { banner.textContent = '결산 데이터를 불러올 수 없습니다.'; banner.hidden = false; }
+      return;
+    }
+
+    const dateEl = document.getElementById('summary-date');
+    if (dateEl && data.plan_date) {
+      const d = new Date(data.plan_date + 'T00:00:00');
+      dateEl.textContent = d.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+    }
+
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    set('m-tasks',      `${data.tasks_done} / ${data.tasks_total}`);
+    set('m-points',     `+${data.points_earned}`);
+    set('m-focus',      data.focus_minutes);
+    set('m-adherence',  `${data.adherence_pct}%`);
+
+    showDialogue('day_complete');
+  }
+
+  document.addEventListener('DOMContentLoaded', loadSummary);
+</script>
+{% endblock %}

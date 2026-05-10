@@ -1,0 +1,118 @@
+{% extends "scheduler/base.html" %}
+{% load static %}
+
+{% block title %}주간 기록 · NightWing{% endblock %}
+{% block nav_history %}active{% endblock %}
+
+{% block content %}
+<div class="week-nav">
+  <button class="btn-ghost" id="prev-week" type="button">
+    <i class="fa-solid fa-chevron-left"></i> 이전 주
+  </button>
+  <span class="week-range" id="week-range">—</span>
+  <button class="btn-ghost" id="next-week" type="button">
+    다음 주 <i class="fa-solid fa-chevron-right"></i>
+  </button>
+</div>
+
+<div class="week-grid" id="week-grid">
+  <!-- JS로 렌더링 -->
+</div>
+
+<div class="card" style="margin-top:8px">
+  <p class="section-title" style="margin-top:0">주간 요약</p>
+  <div class="summary-grid" style="margin:8px 0 0">
+    <div class="metric-card">
+      <div class="metric-value" id="w-tasks">—</div>
+      <div class="metric-label">총 완료 태스크</div>
+    </div>
+    <div class="metric-card accent">
+      <div class="metric-value" id="w-points">—</div>
+      <div class="metric-label">총 포인트</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value" id="w-focus">—</div>
+      <div class="metric-label">평균 일치율</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value" id="w-active">—</div>
+      <div class="metric-label">활동한 날</div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module">
+  import { getWeeklyHistory } from "{% static 'scheduler/js/api.js' %}";
+
+  const DAY_LABELS = ['월', '화', '수', '목', '금', '토', '일'];
+  let offset = 0;
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  function fmtDate(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    return `${d.getMonth() + 1}/${d.getDate()}`;
+  }
+
+  function fmtRange(start, end) {
+    const s = new Date(start + 'T00:00:00');
+    const e = new Date(end + 'T00:00:00');
+    return `${s.getMonth()+1}/${s.getDate()} – ${e.getMonth()+1}/${e.getDate()}`;
+  }
+
+  async function load() {
+    let data;
+    try {
+      data = await getWeeklyHistory(offset);
+    } catch {
+      return;
+    }
+
+    document.getElementById('week-range').textContent = fmtRange(data.week_start, data.week_end);
+    document.getElementById('next-week').disabled = offset >= 0;
+
+    const grid = document.getElementById('week-grid');
+    grid.innerHTML = '';
+
+    let totalTasks = 0, totalPoints = 0, totalPct = 0, activeDays = 0;
+
+    data.days.forEach((day, i) => {
+      const isToday = day.date === todayStr;
+      const hasData = day.tasks_total !== null;
+      const cell = document.createElement('div');
+      cell.className = `week-day${isToday ? ' today' : ''}${hasData ? ' has-data' : ' no-data'}`;
+
+      const pct = hasData && day.tasks_total > 0
+        ? Math.round(day.tasks_done / day.tasks_total * 100)
+        : (hasData ? 0 : null);
+
+      cell.innerHTML = `
+        <span class="week-day__label">${DAY_LABELS[i]}</span>
+        <span class="week-day__date">${fmtDate(day.date)}</span>
+        <span class="week-day__pct">${pct !== null ? pct + '%' : '—'}</span>
+        <span class="week-day__pts">${day.points_earned !== null ? '+' + day.points_earned : ''}</span>
+      `;
+      grid.append(cell);
+
+      if (hasData) {
+        totalTasks  += day.tasks_done ?? 0;
+        totalPoints += day.points_earned ?? 0;
+        totalPct    += day.adherence_pct ?? 0;
+        activeDays  += 1;
+      }
+    });
+
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    set('w-tasks',  totalTasks);
+    set('w-points', `+${totalPoints}`);
+    set('w-focus',  activeDays > 0 ? (totalPct / activeDays).toFixed(1) + '%' : '—');
+    set('w-active', `${activeDays}일`);
+  }
+
+  document.getElementById('prev-week').addEventListener('click', () => { offset--; load(); });
+  document.getElementById('next-week').addEventListener('click', () => { if (offset < 0) { offset++; load(); } });
+
+  document.addEventListener('DOMContentLoaded', load);
+</script>
+{% endblock %}

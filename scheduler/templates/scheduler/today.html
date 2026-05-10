@@ -1,0 +1,79 @@
+{% extends "scheduler/base.html" %}
+{% load static %}
+
+{% block title %}오늘 계획 · NightWing{% endblock %}
+{% block nav_today %}active{% endblock %}
+
+{% block content %}
+<div class="today-header">
+  <span class="today-date" id="today-date"></span>
+  <span class="today-count" id="today-count"></span>
+</div>
+
+<div class="progress-bar" style="margin-bottom:4px">
+  <div class="progress-bar__fill" id="progress-fill" style="width:0%"></div>
+</div>
+
+<!-- 타이머 카드 (태스크 선택 전 hidden) -->
+<div class="timer-card" id="timer-card" hidden>
+  <div class="timer-stripe"></div>
+  <p class="timer-task-name" id="timer-task-name">태스크를 선택해 주세요</p>
+  <div id="timer-display">00:00</div>
+  <div class="timer-actions">
+    <button id="timer-start-btn" class="timer-btn btn-primary" type="button">
+      <i class="fa-solid fa-play"></i> 집중 시작
+    </button>
+    <button id="timer-break-btn" class="timer-btn" type="button">
+      <i class="fa-solid fa-mug-hot"></i> 휴식
+    </button>
+    <button id="timer-stop-btn" class="timer-btn" type="button" disabled>
+      <i class="fa-solid fa-stop"></i> 종료
+    </button>
+  </div>
+</div>
+
+<!-- 태스크 없을 때 빈 상태 -->
+<div class="empty-state" id="empty-state" hidden>
+  <div class="empty-state__icon">📋</div>
+  <p class="empty-state__title">오늘 계획을 시작해요</p>
+  <p class="empty-state__desc">반복 일정이 자동으로 추가되고, 직접 태스크를 추가할 수 있어요.</p>
+  <button class="btn-primary" id="create-plan-btn" type="button">
+    <i class="fa-solid fa-plus"></i> 오늘 계획 만들기
+  </button>
+</div>
+
+<!-- 태스크 목록 -->
+<ul id="task-list"></ul>
+
+<!-- 결산 링크 -->
+<div style="text-align:center;padding:20px 0 4px" id="summary-link-area" hidden>
+  <a id="summary-link" href="#" class="btn-ghost">
+    <i class="fa-solid fa-chart-bar"></i> 하루 결산 보기
+  </a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{% static 'scheduler/js/timer.js' %}"></script>
+<script type="module" src="{% static 'scheduler/js/today.js' %}"></script>
+<script type="module">
+  // 오늘 날짜 표시
+  const el = document.getElementById('today-date');
+  if (el) {
+    const d = new Date();
+    el.textContent = d.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
+  }
+
+  // 결산 링크: plan_id 확인 후 연결
+  document.addEventListener('planLoaded', e => {
+    const planId = e.detail?.planId;
+    if (!planId) return;
+    const area = document.getElementById('summary-link-area');
+    const link = document.getElementById('summary-link');
+    if (area && link) {
+      link.href = `/scheduler/summary/${planId}/`;
+      area.hidden = false;
+    }
+  });
+</script>
+{% endblock %}

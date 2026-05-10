@@ -1,0 +1,254 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}NightWing Scheduler{% endblock %}</title>
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+        crossorigin="anonymous" referrerpolicy="no-referrer">
+  <link rel="stylesheet" href="{% static 'scheduler/css/base.css' %}">
+  <link rel="stylesheet" href="{% static 'scheduler/css/scheduler.css' %}">
+</head>
+<body>
+
+<!-- ── 탑바 ─────────────────────────────────────────────────────────────────── -->
+<header class="topbar">
+  <div class="container topbar-inner">
+    <div class="topbar-left">
+      <span class="nw-stripe"></span>
+      <span class="site-name">NightWing</span>
+    </div>
+    <div class="topbar-right">
+      <span class="point-badge" id="top-points">
+        <i class="fa-solid fa-star"></i>
+        {{ request.user.points }} pts
+      </span>
+    </div>
+  </div>
+</header>
+
+<!-- ── 동반자 행 ──────────────────────────────────────────────────────────────── -->
+<div class="companion-row">
+  <button id="companion-avatar" class="avatar-btn" type="button" aria-label="동반자 설정">🦇</button>
+  <div id="companion-bubble" class="companion-bubble"></div>
+</div>
+
+<!-- ── 메인 콘텐츠 ────────────────────────────────────────────────────────────── -->
+<main class="container" style="padding-top:12px">
+  <div id="error-banner" class="error-banner" hidden></div>
+  {% block content %}{% endblock %}
+</main>
+
+<!-- ── 하단 내비게이션 ────────────────────────────────────────────────────────── -->
+<nav class="bottom-nav">
+  <a href="{% url 'scheduler:today' %}" class="nav-item {% block nav_today %}{% endblock %}">
+    <i class="fa-regular fa-calendar-check"></i>
+    <span>오늘</span>
+  </a>
+  <a href="{% url 'scheduler:history' %}" class="nav-item {% block nav_history %}{% endblock %}">
+    <i class="fa-regular fa-calendar"></i>
+    <span>주간</span>
+  </a>
+  <a href="{% url 'scheduler:recurring' %}" class="nav-item {% block nav_recurring %}{% endblock %}">
+    <i class="fa-solid fa-repeat"></i>
+    <span>반복</span>
+  </a>
+  <a href="#" class="nav-item">
+    <i class="fa-solid fa-gear"></i>
+    <span>설정</span>
+  </a>
+</nav>
+
+<!-- ── 커스텀 동반자 모달 ──────────────────────────────────────────────────────── -->
+<div id="companion-modal-overlay" class="modal-overlay" hidden></div>
+<div id="companion-modal" class="modal-box" hidden>
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h2 class="modal-title">동반자 설정</h2>
+      <button id="companion-modal-close" class="modal-close" type="button" aria-label="닫기">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- 기존 프리셋 목록 -->
+    <p class="section-title">내 프리셋</p>
+    <div id="preset-list"></div>
+
+    <!-- 새 프리셋 만들기 -->
+    <p class="section-title">새 프리셋 만들기</p>
+
+    <!-- 프로필 이미지 + 이모지 -->
+    <div class="preset-emoji-row">
+      <div class="emoji-preview" id="emoji-preview">
+        <img id="preset-image-preview" src="" alt="" hidden
+             style="width:100%;height:100%;border-radius:50%;object-fit:cover;display:block">
+        <span id="emoji-preview-text">🦇</span>
+      </div>
+      <div style="flex:1">
+        <div class="form-group">
+          <label class="form-label">프로필 이미지</label>
+          <input type="file" id="preset-image-file" accept=".png,.gif,.webp,.jpg,.jpeg"
+                 class="form-input" style="padding:6px;font-size:13px">
+          <span class="form-hint">png, gif, webp, jpg · 5MB 이하</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="preset-emoji">이모지 (이미지 없을 때 표시)</label>
+          <input class="form-input" id="preset-emoji" type="text" maxlength="4" placeholder="🐱">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="preset-name">이름</label>
+      <input class="form-input" id="preset-name" type="text" placeholder="나만의 동반자 이름" maxlength="50">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">테마 색상</label>
+      <div class="color-input-row">
+        <input class="form-color" id="preset-color" type="color" value="#1565C0">
+        <span class="form-hint">동반자 카드 포인트 색상</span>
+      </div>
+    </div>
+
+    <!-- 탭 전환 -->
+    <div class="tabs">
+      <button class="tab-btn active" type="button" data-tab-target="direct">대사 직접 입력</button>
+      <button class="tab-btn" type="button" data-tab-target="ai" disabled>AI 프롬프트 (준비 중)</button>
+    </div>
+
+    <!-- 탭1: 대사 직접 입력 -->
+    <div data-tab="direct">
+      <p class="form-hint" style="margin-bottom:12px">
+        각 상황별 대사를 한 줄에 하나씩 입력하세요. 랜덤으로 선택됩니다.
+      </p>
+
+      <div class="form-group">
+        <label class="form-label">대사 JSON 파일 업로드 (선택)</label>
+        <input type="file" id="preset-json-file" accept=".json"
+               class="form-input" style="padding:6px;font-size:13px">
+        <span class="form-hint">{"morning": ["대사1", "대사2"], ...} 형식 또는 fixtures 전체 형식 지원</span>
+      </div>
+
+      <div class="trigger-section">
+        {% with triggers=trigger_list %}
+        <!-- 트리거 목록은 JS 없이 정적으로 렌더 -->
+        {% endwith %}
+
+        <div class="trigger-row">
+          <div class="trigger-label">☀️ 아침 인사 <code>morning</code></div>
+          <textarea class="form-textarea" id="dlg-morning" rows="2" placeholder="좋은 아침이야! 오늘도 함께 달려보자."></textarea>
+        </div>
+        <div class="trigger-row">
+          <div class="trigger-label">🌤 오후 인사 <code>afternoon</code></div>
+          <textarea class="form-textarea" id="dlg-afternoon" rows="2" placeholder="오후도 잘 버티고 있어? 응원해!"></textarea>
+        </div>
+        <div class="trigger-row">
+          <div class="trigger-label">🌙 저녁 인사 <code>evening</code></div>
+          <textarea class="form-textarea" id="dlg-evening" rows="2" placeholder="저녁이 왔네. 오늘 정말 잘했어."></textarea>
+        </div>
+        <div class="trigger-row">
+          <div class="trigger-label">🍳 아침 식사 <code>meal_breakfast</code></div>
+          <textarea class="form-textarea" id="dlg-meal_breakfast" rows="2" placeholder="아침밥은 먹었어? 든든하게 먹고 시작해!"></textarea>
+        </div>
+        <div class="trigger-row">
+          <div class="trigger-label">🍱 점심 식사 <code>meal_lunch</code></div>
+          <textarea class="form-textarea" id="dlg-meal_lunch" rows="2" placeholder="점심 시간이야, 잠깐 쉬어가자."></textarea>
+        </div>
+        <div class="trigger-row">
+          <div class="trigger-label">🍽 저녁 식사 <code>meal_dinner</code></div>
+          <textarea class="form-textarea" id="dlg-meal_dinner" rows="2" placeholder="저녁도 맛있게 먹어!"></textarea>
+        </div>
+        <div class="trigger-row">
+          <div class="trigger-label">🌛 취침 독려 <code>bedtime_nudge</code></div>
+          <textarea class="form-textarea" id="dlg-bedtime_nudge" rows="2" placeholder="이제 그만 자야지, 내일도 있어!"></textarea>
+        </div>
+        <div class="trigger-row">
+          <div class="trigger-label">🚀 태스크 시작 <code>task_start</code></div>
+          <div class="trigger-hint">사용 가능: {{task_name}}</div>
+          <textarea class="form-textarea" id="dlg-task_start" rows="2" placeholder="{{task_name}} 시작! 파이팅!"></textarea>
+        </div>
+        <div class="trigger-row">
+          <div class="trigger-label">✅ 태스크 완료 <code>task_done</code></div>
+          <div class="trigger-hint">사용 가능: {{task_name}}, {{points}}, {{done_count}}</div>
+          <textarea class="form-textarea" id="dlg-task_done" rows="2" placeholder="{{task_name}} 완료! +{{points}}점 획득!"></textarea>
+        </div>
+        <div class="trigger-row">
+          <div class="trigger-label">⏭ 태스크 건너뜀 <code>task_skip</code></div>
+          <div class="trigger-hint">사용 가능: {{task_name}}</div>
+          <textarea class="form-textarea" id="dlg-task_skip" rows="2" placeholder="괜찮아, 다음에 하면 돼!"></textarea>
+        </div>
+        <div class="trigger-row">
+          <div class="trigger-label">🎉 첫 번째 완료 <code>cheer_first_task</code></div>
+          <div class="trigger-hint">사용 가능: {{points}}, {{done_count}}</div>
+          <textarea class="form-textarea" id="dlg-cheer_first_task" rows="2" placeholder="첫 태스크 완료! 시작이 반이야!"></textarea>
+        </div>
+        <div class="trigger-row">
+          <div class="trigger-label">📊 절반 완료 <code>cheer_halfway</code></div>
+          <div class="trigger-hint">사용 가능: {{done_count}}, {{total}}</div>
+          <textarea class="form-textarea" id="dlg-cheer_halfway" rows="2" placeholder="절반 왔어! {{done_count}}/{{total}} 완료!"></textarea>
+        </div>
+        <div class="trigger-row">
+          <div class="trigger-label">⏱ 집중 25분 <code>cheer_focus_long</code></div>
+          <textarea class="form-textarea" id="dlg-cheer_focus_long" rows="2" placeholder="25분 집중! 잠깐 쉬어도 돼."></textarea>
+        </div>
+        <div class="trigger-row">
+          <div class="trigger-label">🏆 전체 완료 <code>all_tasks_done</code></div>
+          <div class="trigger-hint">사용 가능: {{total}}, {{points}}</div>
+          <textarea class="form-textarea" id="dlg-all_tasks_done" rows="2" placeholder="오늘 할 일 {{total}}개 전부 완료! 최고야!"></textarea>
+        </div>
+        <div class="trigger-row">
+          <div class="trigger-label">🌟 하루 결산 <code>day_complete</code></div>
+          <textarea class="form-textarea" id="dlg-day_complete" rows="2" placeholder="오늘 하루 수고했어. 내일도 기대해!"></textarea>
+        </div>
+        <div class="trigger-row">
+          <div class="trigger-label">🔥 연속 달성 <code>streak_praise</code></div>
+          <textarea class="form-textarea" id="dlg-streak_praise" rows="2" placeholder="연속으로 달성하고 있어! 대단해!"></textarea>
+        </div>
+        <div class="trigger-row">
+          <div class="trigger-label">😴 장시간 유휴 <code>long_idle</code></div>
+          <textarea class="form-textarea" id="dlg-long_idle" rows="2" placeholder="오랫동안 안 보였네, 다시 시작해볼까?"></textarea>
+        </div>
+        <div class="trigger-row">
+          <div class="trigger-label">☕ 휴식 후 복귀 <code>return_from_break</code></div>
+          <textarea class="form-textarea" id="dlg-return_from_break" rows="2" placeholder="잘 쉬었어? 다시 달려보자!"></textarea>
+        </div>
+        <div class="trigger-row">
+          <div class="trigger-label">⚠️ 지연 알림 <code>overdue_gentle</code></div>
+          <div class="trigger-hint">사용 가능: {{task_name}}</div>
+          <textarea class="form-textarea" id="dlg-overdue_gentle" rows="2" placeholder="{{task_name}}, 아직 시작 안 했어? 조금이라도 해볼까?"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- 탭2: AI 프롬프트 (준비 중) -->
+    <div data-tab="ai" style="display:none">
+      <div class="ai-coming-soon">
+        <div class="ai-coming-soon__icon">🤖</div>
+        <p><strong>AI 프롬프트 기능은 준비 중이에요</strong></p>
+        <p style="margin-top:8px;font-size:13px">시스템 프롬프트를 설정하면 AI가 상황에 맞는 대사를 자동으로 생성합니다.</p>
+      </div>
+      <div class="form-group" style="opacity:0.5;pointer-events:none">
+        <label class="form-label" for="preset-prompt">시스템 프롬프트</label>
+        <textarea class="form-textarea" id="preset-prompt" rows="5"
+          placeholder="You are a helpful and supportive companion..."></textarea>
+      </div>
+    </div>
+
+    <div id="modal-error" class="modal-error-msg" hidden></div>
+
+    <button id="save-preset-btn" class="btn-primary" type="button" style="width:100%;margin-top:16px">
+      <i class="fa-solid fa-floppy-disk"></i> 프리셋 저장
+    </button>
+  </div>
+</div>
+
+<!-- ── JS 모듈 ────────────────────────────────────────────────────────────────── -->
+<script type="module" src="{% static 'scheduler/js/companion.js' %}"></script>
+{% block scripts %}{% endblock %}
+
+</body>
+</html>
