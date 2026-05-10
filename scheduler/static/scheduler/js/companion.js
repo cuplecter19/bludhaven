@@ -399,7 +399,9 @@ export function initCompanionModal() {
   // 현재 활성 동반자를 불러와서 아바타에 표시
   getActiveCompanion().then(data => {
     if (data?.preset) updateAvatar(data.preset);
-  }).catch(() => {});
+  }).catch(err => {
+    console.warn('활성 동반자를 불러오지 못했습니다:', err);
+  });
 }
 
 document.addEventListener('DOMContentLoaded', initCompanionModal);
