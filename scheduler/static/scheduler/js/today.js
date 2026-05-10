@@ -128,6 +128,7 @@ export async function onComplete(taskId, taskName) {
       points: String(points),
       done_count: String(done_count),
       total: String(total),
+      remaining: String(total - done_count),
     });
   }
 

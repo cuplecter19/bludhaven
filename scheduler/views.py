@@ -3,6 +3,7 @@ import os
 import random
 from datetime import date, timedelta
 
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, render
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
@@ -398,6 +399,7 @@ def _serialize_preset(preset, request=None):
         'dialogue_map': preset.dialogue_map,
         'system_prompt': preset.system_prompt,
         'image_url': image_url,
+        'is_default': preset.is_default,
     }
 
 
@@ -405,7 +407,9 @@ def _serialize_preset(preset, request=None):
 @permission_classes([IsAuthenticated])
 def companion_presets(request):
     if request.method == 'GET':
-        presets = CompanionPreset.objects.filter(created_by=request.user)
+        presets = CompanionPreset.objects.filter(
+            Q(created_by=request.user) | Q(is_default=True)
+        ).order_by('-is_default', 'id')
         return Response([_serialize_preset(p, request) for p in presets])
 
     # POST — multipart/form-data
