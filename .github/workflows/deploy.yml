@@ -6,7 +6,7 @@ on:
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-24.04  # ✅ 버전 명시 (OCIR 환경과 일치)
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout repository
@@ -19,7 +19,6 @@ jobs:
         run: |
           echo "OCIR_REGION: ${{ secrets.OCIR_REGION }}"
           echo "이미지 태그: ${{ secrets.OCIR_REGION }}/${{ secrets.OCIR_NAMESPACE }}/${{ secrets.OCIR_REPO_NAME }}:latest"
-          # ✅ USERNAME, PASSWORD는 로그 출력 제거
 
       - name: Log in to OCIR
         uses: docker/login-action@v3
@@ -33,9 +32,43 @@ jobs:
         with:
           context: .
           push: true
-          platforms: linux/amd64  # ✅ OCIR 대상 아키텍처 명시 권장
+          platforms: linux/amd64
           tags: |
             ${{ secrets.OCIR_REGION }}/${{ secrets.OCIR_NAMESPACE }}/${{ secrets.OCIR_REPO_NAME }}:latest
             ${{ secrets.OCIR_REGION }}/${{ secrets.OCIR_NAMESPACE }}/${{ secrets.OCIR_REPO_NAME }}:${{ github.sha }}
-          cache-from: type=gha   # ✅ GitHub Actions 캐시로 빌드 속도 향상
+          cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Deploy to OCI VM via SSH
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          # ✅ key.pem 생성
+          printf '%s\n' "$SSH_KEY" > key.pem
+          chmod 600 key.pem
+
+          # ✅ 변수를 로컬에서 조립 후 SSH로 주입
+          IMAGE="${{ secrets.OCIR_REGION }}/${{ secrets.OCIR_NAMESPACE }}/${{ secrets.OCIR_REPO_NAME }}:latest"
+          REGISTRY="${{ secrets.OCIR_REGION }}"
+          OCIR_USER="${{ secrets.OCIR_USERNAME }}"
+          OCIR_PASS="${{ secrets.OCIR_PASSWORD }}"
+
+          ssh -o StrictHostKeyChecking=no -i key.pem "$SSH_USER@$SSH_HOST" \
+            REGISTRY="$REGISTRY" \
+            IMAGE="$IMAGE" \
+            OCIR_USER="$OCIR_USER" \
+            OCIR_PASS="$OCIR_PASS" \
+            bash -s << 'EOF'
+              echo "$OCIR_PASS" | docker login "$REGISTRY" -u "$OCIR_USER" --password-stdin
+              docker pull "$IMAGE"
+              docker stop demo || true
+              docker rm demo || true
+              docker run -d --name demo -p 80:80 --restart unless-stopped "$IMAGE"
+              # ✅ 오래된 이미지 정리
+              docker image prune -f
+          EOF
+
+          # ✅ key.pem 즉시 삭제
+          rm -f key.pem
