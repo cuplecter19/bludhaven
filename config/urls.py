@@ -27,4 +27,5 @@ urlpatterns = [
     path('leitner/', include('leitner.urls')),
     path('shop/', include('shop.urls')),
     path('scheduler/', include('scheduler.urls')),
+    path('api/', include('scheduler.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
