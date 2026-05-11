@@ -49,7 +49,7 @@ jobs:
           chmod 600 key.pem
 
           IMAGE="${{ secrets.OCIR_REGION }}.ocir.io/${{ secrets.OCIR_NAMESPACE }}/${{ secrets.OCIR_REPO_NAME }}:latest"
-          REGISTRY="${{ secrets.OCIR_REGION }}.ocir.io"
+          REGISTRY="${{ secrets.OCIR_REGION }}"
           OCIR_USER="${{ secrets.OCIR_USERNAME }}"
           OCIR_PASS="${{ secrets.OCIR_PASSWORD }}"
 
