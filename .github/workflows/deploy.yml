@@ -32,7 +32,7 @@ jobs:
         with:
           context: .
           push: true
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           tags: |
             ${{ secrets.OCIR_REGION }}/${{ secrets.OCIR_NAMESPACE }}/${{ secrets.OCIR_REPO_NAME }}:latest
             ${{ secrets.OCIR_REGION }}/${{ secrets.OCIR_NAMESPACE }}/${{ secrets.OCIR_REPO_NAME }}:${{ github.sha }}
@@ -53,7 +53,6 @@ jobs:
           OCIR_USER="${{ secrets.OCIR_USERNAME }}"
           OCIR_PASS="${{ secrets.OCIR_PASSWORD }}"
 
-          # ✅ 변수를 export 문으로 조립하여 전달합니다.
           ssh -o StrictHostKeyChecking=no -i key.pem "$SSH_USER@$SSH_HOST" "
             export REGISTRY='$REGISTRY'
             export IMAGE='$IMAGE'
@@ -61,10 +60,14 @@ jobs:
             export OCIR_PASS='$OCIR_PASS'
             bash -s" << 'EOF'
               echo "$OCIR_PASS" | docker login "$REGISTRY" -u "$OCIR_USER" --password-stdin
+
               docker pull "$IMAGE"
-              docker stop demo || true
-              docker rm demo || true
-              docker run -d --name demo -p 80:80 --restart unless-stopped "$IMAGE"
+
+              # ✅ 실행 중인 모든 컨테이너 정리
+              docker stop $(docker ps -q) 2>/dev/null || true
+              docker rm $(docker ps -aq) 2>/dev/null || true
+
+              docker run -d -p 80:80 --restart unless-stopped "$IMAGE"
               docker image prune -f
           EOF
 
