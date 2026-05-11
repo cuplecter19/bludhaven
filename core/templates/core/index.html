@@ -1,46 +1,169 @@
 {% load static %}
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BLÜDHAVEN HUB</title>
-    <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Roboto+Condensed:wght@300;400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'core/css/index.css' %}">
 </head>
 <body>
-    <nav class="navbar">
-        <div style="font-size: 2rem; color: var(--nw-blue);">TOYBOX</div>
-        <div class="nav-links">
+
+    <!-- ─────────────────────────────────────────────────────
+         LAYER -2 : Background image
+    ──────────────────────────────────────────────────────── -->
+    <div class="layer layer-bg-image">
+        {% if bg_image %}
+            <img src="{{ bg_image.image.url }}" alt="background" class="bg-img">
+        {% else %}
+            <div class="bg-img bg-img--fallback"></div>
+        {% endif %}
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────
+         LAYER -1 : Background text / watermark
+    ──────────────────────────────────────────────────────── -->
+    <div class="layer layer-bg-text" aria-hidden="true">
+        <span class="bg-text-watermark">
+            {% if text_blocks.bg_text %}{{ text_blocks.bg_text }}{% else %}BLÜDHAVEN · TOYBOX · MISSION CONTROL · BLÜDHAVEN · TOYBOX · MISSION CONTROL · BLÜDHAVEN · TOYBOX · MISSION CONTROL · BLÜDHAVEN · TOYBOX · MISSION CONTROL · BLÜDHAVEN · TOYBOX · MISSION CONTROL · BLÜDHAVEN · TOYBOX · MISSION CONTROL · BLÜDHAVEN · TOYBOX · MISSION CONTROL · BLÜDHAVEN · TOYBOX{% endif %}
+        </span>
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────
+         LAYER 0 : Main images (magazine hero photos)
+    ──────────────────────────────────────────────────────── -->
+    <div class="layer layer-main-images">
+        {% if main_images %}
+            {% for img in main_images %}
+                <div class="main-img-slot main-img-slot--{{ forloop.counter }}">
+                    <img src="{{ img.image.url }}" alt="{{ img.title }}">
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="main-img-slot main-img-slot--1 main-img-slot--placeholder"></div>
+            <div class="main-img-slot main-img-slot--2 main-img-slot--placeholder"></div>
+            <div class="main-img-slot main-img-slot--3 main-img-slot--placeholder"></div>
+        {% endif %}
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────
+         LAYER 1 : Text blocks + clock widget
+    ──────────────────────────────────────────────────────── -->
+    <div class="layer layer-text">
+
+        <!-- Text block 1 – issue / headline -->
+        <div class="text-block text-block--1">
+            <p class="text-block__label">VOL. 01 — ISSUE 01</p>
+            <h1 class="text-block__headline">
+                {% if text_blocks.block1 %}{{ text_blocks.block1 }}{% else %}MISSION<br>CONTROL{% endif %}
+            </h1>
+        </div>
+
+        <!-- Text block 2 – subheadline / tagline -->
+        <div class="text-block text-block--2">
+            <p class="text-block__body">
+                {% if text_blocks.block2 %}{{ text_blocks.block2 }}{% else %}Identify yourself<br>to access the Toybox.{% endif %}
+            </p>
+        </div>
+
+        <!-- Text block 3 – user greeting / feature note -->
+        <div class="text-block text-block--3">
+            {% if user.is_authenticated %}
+                <p class="text-block__tag">OPERATOR</p>
+                <p class="text-block__name">{{ user.nickname }}</p>
+                <p class="text-block__pts">🪙 {{ user.points }} PT</p>
+            {% else %}
+                <p class="text-block__tag">CLASSIFIED</p>
+                <p class="text-block__name">
+                    {% if text_blocks.block3 %}{{ text_blocks.block3 }}{% else %}ACCESS DENIED{% endif %}
+                </p>
+            {% endif %}
+        </div>
+
+        <!-- Clock widget – real date & time (JS) -->
+        <div class="text-block text-block--clock" id="clock-widget">
+            <div class="clock__time" id="clock-time">00:00:00</div>
+            <div class="clock__date" id="clock-date">MON 01 JAN 2000</div>
+        </div>
+
+    </div>
+
+    <!-- ─────────────────────────────────────────────────────
+         LAYER 2 : Menu buttons (inline magazine navigation)
+    ──────────────────────────────────────────────────────── -->
+    <div class="layer layer-menu">
+
+        <!-- Auth menu (top-right corner label) -->
+        <div class="menu-auth">
             {% if user.is_authenticated %}
                 {% if user.profile_image %}
-                    <img src="{{ user.profile_image.url }}" class="profile-circle">
+                    <img src="{{ user.profile_image.url }}" class="profile-circle" alt="profile">
                 {% else %}
-                    <div class="profile-circle" style="display:inline-block; background:#333;"></div>
+                    <div class="profile-circle profile-circle--empty"></div>
                 {% endif %}
-                <span style="margin: 0 15px;">{{ user.nickname }} (🪙 {{ user.points }} PT)</span>
-                <a href="{% url 'accounts:profile_update' %}" style="color: var(--nw-blue); text-decoration: none;">PROFILE</a> |
-                <a href="{% url 'accounts:logout' %}" style="color: #ff0000; text-decoration: none;">LOGOUT</a>
+                <a href="{% url 'accounts:profile_update' %}" class="menu-auth__link">PROFILE</a>
+                <span class="menu-divider">·</span>
+                <a href="{% url 'accounts:logout' %}" class="menu-auth__link menu-auth__link--danger">LOGOUT</a>
             {% else %}
-                <a href="{% url 'accounts:signup' %}" style="color: white; text-decoration: none;">JOIN</a> |
-                <a href="{% url 'accounts:login' %}" style="color: var(--nw-blue); text-decoration: none;">LOGIN</a>
-            {% endif %}
-        </div>
-    </nav>
-
-    <div class="main-container">
-        <div class="hero-card">
-            <h1>MISSION CONTROL</h1>
-            {% if user.is_authenticated %}
-                <p>Welcome back, {{ user.nickname }}. Blüdhaven needs you.</p>
-            {% else %}
-                <p>Identify yourself to access the Toybox systems.</p>
+                <a href="{% url 'accounts:signup' %}" class="menu-auth__link">JOIN</a>
+                <span class="menu-divider">·</span>
+                <a href="{% url 'accounts:login' %}" class="menu-auth__link">LOGIN</a>
             {% endif %}
         </div>
 
-        <div class="menu-grid">
-            <a href="{% url 'leitner:dashboard' %}" class="toy-btn">📚 LEITNER BOX</a>
-            <a href="{% url 'scheduler:today' %}" class="toy-btn">📅 SCHEDULER</a>
-            <a href="{% url 'shop:shop' %}" class="toy-btn">💰 POINT SHOP</a>
+        <!-- Primary navigation – styled as magazine content labels -->
+        <nav class="menu-nav">
+            <a href="{% url 'leitner:dashboard' %}" class="menu-nav__item">
+                <span class="menu-nav__number">01</span>
+                <span class="menu-nav__label">LEITNER BOX</span>
+                <span class="menu-nav__sub">FLASH CARDS &amp; MEMORY</span>
+            </a>
+            <a href="{% url 'scheduler:today' %}" class="menu-nav__item">
+                <span class="menu-nav__number">02</span>
+                <span class="menu-nav__label">SCHEDULER</span>
+                <span class="menu-nav__sub">DAILY MISSION LOG</span>
+            </a>
+            <a href="{% url 'shop:shop' %}" class="menu-nav__item">
+                <span class="menu-nav__number">03</span>
+                <span class="menu-nav__label">POINT SHOP</span>
+                <span class="menu-nav__sub">REDEEM YOUR POINTS</span>
+            </a>
+        </nav>
+
+        <!-- Masthead strip -->
+        <div class="masthead">
+            <span class="masthead__title">BLÜDHAVEN</span>
+            <span class="masthead__sub">TOYBOX HUB</span>
         </div>
+
     </div>
+
+    <script>
+    (function () {
+        var DAYS   = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+        var MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN',
+                      'JUL','AUG','SEP','OCT','NOV','DEC'];
+
+        function pad(n) { return String(n).padStart(2, '0'); }
+
+        function tick() {
+            var now = new Date();
+            var h = pad(now.getHours());
+            var m = pad(now.getMinutes());
+            var s = pad(now.getSeconds());
+            var day  = DAYS[now.getDay()];
+            var date = pad(now.getDate());
+            var mon  = MONTHS[now.getMonth()];
+            var yr   = now.getFullYear();
+            document.getElementById('clock-time').textContent = h + ':' + m + ':' + s;
+            document.getElementById('clock-date').textContent = day + ' ' + date + ' ' + mon + ' ' + yr;
+        }
+
+        tick();
+        setInterval(tick, 1000);
+    }());
+    </script>
+
 </body>
 </html>
