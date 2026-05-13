@@ -94,8 +94,8 @@ class SceneLayer(models.Model):
     z_index = models.PositiveIntegerField(default=0)
     enabled = models.BooleanField(default=True)
 
-    x = models.FloatField(default=0, validators=[MinValueValidator(0.0)])
-    y = models.FloatField(default=0, validators=[MinValueValidator(0.0)])
+    x = models.FloatField(default=0)
+    y = models.FloatField(default=0)
     width = models.FloatField(default=200, validators=[MinValueValidator(0.0)])
     height = models.FloatField(default=200, validators=[MinValueValidator(0.0)])
 

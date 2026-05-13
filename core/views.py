@@ -308,6 +308,34 @@ def editor_scene_list(request):
     scenes = PageScene.objects.all().order_by('-is_active', 'id')
     return Response({'ok': True, 'data': [serialize_scene_summary(s) for s in scenes]})
 
+# 기존 editor_scene_list 뷰 아래에 추가
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def asset_list(request):
+    kind = request.GET.get('kind')  # ?kind=background 등, 없으면 전체
+    qs = MediaAsset.objects.all().order_by('-created_at')
+    if kind:
+        qs = qs.filter(kind=kind)
+    data = []
+    for asset in qs:
+        thumb_path = None
+        # thumb 변형을 우선, 없으면 full 사용
+        # storage_path는 full_webp 경로이므로 thumb 경로를 추론
+        base = asset.storage_path.replace('_full.webp', '')
+        thumb_candidate = f'{base}_thumb.webp'
+        if default_storage.exists(thumb_candidate):
+            thumb_path = default_storage.url(thumb_candidate)
+        else:
+            thumb_path = default_storage.url(asset.storage_path)
+
+        data.append({
+            **serialize_asset(asset),
+            'thumb_url': thumb_path,
+            'full_url': default_storage.url(asset.storage_path),
+        })
+    return Response({'ok': True, 'data': data})
+
 
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
@@ -321,6 +349,31 @@ def create_scene(request):
             PageScene.objects.filter(is_active=True).update(is_active=False)
         scene = PageScene.objects.create(name=name, viewport_mode=viewport_mode, is_active=is_active)
     return Response({'ok': True, 'data': serialize_scene(scene)}, status=status.HTTP_201_CREATED)
+
+@api_view(['DELETE'])
+@permission_classes([IsAdminUser])
+def delete_asset(request, asset_id):
+    asset = get_object_or_404(MediaAsset, pk=asset_id)
+
+    # storage에서 실제 파일 삭제 (모든 variant)
+    base = asset.storage_path  # ex) core/assets/2026/05/13/abc123_full.webp
+    stem = base.replace('_full.webp', '').replace('_full.avif', '')
+    suffixes = [
+        '_full.webp', '_full.avif',
+        '_large.webp', '_large.avif',
+        '_medium.webp', '_medium.avif',
+        '_thumb.webp', '_thumb.avif',
+    ]
+    for suffix in suffixes:
+        path = f'{stem}{suffix}'
+        try:
+            if default_storage.exists(path):
+                default_storage.delete(path)
+        except Exception as e:
+            logger.warning('Failed to delete storage file %s: %s', path, e)
+
+    asset.delete()
+    return Response({'ok': True}, status=status.HTTP_200_OK)
 
 
 @api_view(['PATCH'])
@@ -477,16 +530,17 @@ def validate_file_magic_bytes(data: bytes, filename: str, content_type: str) -> 
 
 def parse_layer_numeric_fields(data):
     parsed = {
-        'z_index': int(data.get('z_index', 0)),
-        'x': float(data.get('x', 0)),
-        'y': float(data.get('y', 0)),
-        'width': float(data.get('width', 200)),
-        'height': float(data.get('height', 200)),
+        'z_index':      int(data.get('z_index', 0)),
+        'x':            float(data.get('x', 0)),
+        'y':            float(data.get('y', 0)),
+        'width':        float(data.get('width', 200)),
+        'height':       float(data.get('height', 200)),
         'rotation_deg': float(data.get('rotation_deg', 0)),
-        'scale': float(data.get('scale', 1)),
-        'opacity': float(data.get('opacity', 1)),
+        'scale':        float(data.get('scale', 1)),
+        'opacity':      float(data.get('opacity', 1)),
     }
-    for axis in ('x', 'y', 'width', 'height'):
+    # x, y는 음수 허용 (화면 밖 배치, 패럴랙스 오프셋 등)
+    for axis in ('width', 'height'):
         if parsed[axis] < 0:
             raise ValueError(f'{axis} must be >= 0')
     return parsed

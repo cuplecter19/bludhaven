@@ -16,6 +16,8 @@ urlpatterns = [
     path('editor/layers/reorder', views.reorder_layers, name='reorder_layers'),
 
     path('assets/upload', views.upload_asset, name='upload_asset'),
+    path('assets', views.asset_list, name='asset_list'),
+    path('assets/<int:asset_id>/delete', views.delete_asset, name='delete_asset'),
 
     path('editor/revisions', views.create_revision, name='create_revision'),
     path('editor/revisions/<int:revision_id>/restore', views.restore_revision, name='restore_revision'),

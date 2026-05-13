@@ -6,7 +6,7 @@ export function initParallaxEngine(container, layers, options = {}) {
     currentY: 0,
     sensitivity: options.sensitivity ?? 1,
     maxOffset: options.maxOffset ?? 40,
-    invert: !!options.invert,
+    invert: options.invert !== undefined ? !!options.invert : true,
   };
 
   const nodes = layers

@@ -329,6 +329,9 @@ function parseUnitValue(str, fallbackUnit = 'px') {
     const res = await uploadAsset(file, kind);
     if (!res.ok) return showError(`${res.error_code || 'UPLOAD'}: ${res.error}`);
 
+    delete assetCache[kind];
+    if (currentAssetKind === kind) loadAssets(kind);
+
     const layer = getSelectedLayer();
     if (layer) {
       const patch = { settings_json: { ...(layer.settings_json || {}), asset_url: res.data.variants.full_webp || '' } };
@@ -338,6 +341,108 @@ function parseUnitValue(str, fallbackUnit = 'px') {
       render();
     }
   });
+
+    // initEditorPanel 내부, bindPanelDrag() 호출 위에 추가
+
+  // ── 에셋 라이브러리 ─────────────────────────────────────────
+  const assetLibrarySection = document.getElementById('asset-library-section');
+  const assetThumbGrid      = document.getElementById('asset-thumb-grid');
+  const assetTabs           = document.querySelectorAll('.asset-tab');
+  let currentAssetKind      = 'background';
+  let assetCache            = {};  // kind → 데이터 캐시
+
+  async function loadAssets(kind) {
+    if (assetCache[kind]) {
+      renderAssetGrid(assetCache[kind]);
+      return;
+    }
+    const res = await api(`/api/assets?kind=${kind}`);
+    if (!res.ok) return;
+    assetCache[kind] = res.data;
+    renderAssetGrid(res.data);
+  }
+
+  function renderAssetGrid(assets) {
+  assetThumbGrid.innerHTML = '';
+  if (!assets.length) {
+    assetThumbGrid.innerHTML = '<p class="asset-empty">업로드된 에셋 없음</p>';
+    return;
+  }
+  for (const asset of assets) {
+    const thumb = document.createElement('div');
+    thumb.className = 'asset-thumb';
+    thumb.title = `${asset.width}×${asset.height} · ${(asset.bytes / 1024).toFixed(0)}KB`;
+
+    const img = document.createElement('img');
+    img.src = asset.thumb_url;
+    img.alt = asset.kind;
+    img.loading = 'lazy';
+
+    // 삭제 버튼
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'asset-thumb__delete';
+    delBtn.textContent = '✕';
+    delBtn.title = '에셋 삭제';
+    delBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();  // 썸네일 클릭(URL 삽입)과 분리
+      if (!confirm('이 에셋을 삭제하면 복구할 수 없습니다. 계속하시겠습니까?')) return;
+      const res = await api(`/api/assets/${asset.id}/delete`, { method: 'DELETE' });
+      if (!res.ok) return showError(res.error || '에셋 삭제 실패');
+      // 캐시 무효화 후 목록 갱신
+      delete assetCache[currentAssetKind];
+      await loadAssets(currentAssetKind);
+    });
+
+    // 썸네일 클릭 → asset_url 삽입
+    thumb.addEventListener('click', () => {
+      const assetInput = document.getElementById('prop-asset');
+      if (assetInput) {
+        assetInput.value = asset.full_url;
+        assetInput.style.outline = '2px solid #5cb2ff';
+        setTimeout(() => { assetInput.style.outline = ''; }, 1200);
+      }
+    });
+
+    thumb.append(img, delBtn);
+    assetThumbGrid.appendChild(thumb);
+  }
+}
+
+  // 탭 클릭 이벤트
+  for (const tab of assetTabs) {
+    tab.addEventListener('click', () => {
+      assetTabs.forEach((t) => t.classList.remove('is-active'));
+      tab.classList.add('is-active');
+      currentAssetKind = tab.dataset.kind;
+      // 탭 전환 시 캐시 무효화 (새 업로드 반영)
+      delete assetCache[currentAssetKind];
+      loadAssets(currentAssetKind);
+    });
+  }
+
+  // 씬이 로드됐을 때 에셋 라이브러리 표시
+  // 기존 store.subscribe 콜백 안에 추가:
+  store.subscribe((state) => {
+    refreshLayerList(state);
+    syncDirty(state);
+    fillLayerProps(getSelectedLayer());
+    viewportSelect.value = state.viewportMode || 'both';
+
+    // ↓ 추가: 씬이 있으면 에셋 라이브러리 표시
+    if (state.scene?.id) {
+      assetLibrarySection.hidden = false;
+    }
+  });
+
+  // 업로드 성공 후 캐시 무효화 (기존 asset-upload-btn 핸들러 끝에 추가)
+  // delete assetCache[kind]; loadAssets(currentAssetKind);
+  // → 업로드 버튼 핸들러 마지막에 아래 두 줄 추가:
+  //   delete assetCache[kind];
+  //   if (currentAssetKind === kind) loadAssets(kind);
+
+  // 초기 로드
+  loadAssets(currentAssetKind);
 
   bindPanelDrag();
 
