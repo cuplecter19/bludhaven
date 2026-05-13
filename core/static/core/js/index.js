@@ -1,46 +1,91 @@
-/* index.js — 메인 페이지 JS (패럴랙스) */
+import { createStateStore } from './state-store.js';
+import { renderScene, teardownDynamicWidgets } from './scene-renderer.js';
+import { initParallaxEngine } from './parallax-engine.js';
+import { initEditorPanel } from './editor-panel.js';
+import { createStickerEditController } from './sticker-edit-mode.js';
 
-(function () {
-    'use strict';
+const root = document.getElementById('scene-root');
+const isAdmin = !!window.__CORE_MAINPAGE__?.isAdmin;
+const store = createStateStore();
+let parallaxEngine = null;
+let editor = null;
 
-    // ── 패럴랙스 배경 ────────────────────────────────────────────
-    var parallaxBg = document.querySelector('.layer-parallax-bg');
-    var speed = parseFloat(parallaxBg ? (parallaxBg.dataset.parallaxSpeed || '0.4') : '0.4');
+export async function loadActiveScene() {
+  const res = await fetch('/api/mainpage/scene/active', { credentials: 'same-origin' });
+  const payload = await res.json();
+  if (!payload.ok) throw new Error(payload.error || 'Failed to load scene');
+  return payload.data || {
+    id: null,
+    name: 'Fallback Scene',
+    is_active: true,
+    viewport_mode: 'both',
+    layers: [{
+      id: 'fallback-msg',
+      layer_type: 'text',
+      layer_tier: 1,
+      z_index: 0,
+      enabled: true,
+      x: 24,
+      y: 24,
+      width: 500,
+      height: 80,
+      rotation_deg: 0,
+      scale: 1,
+      opacity: 1,
+      settings_json: { text: '활성 씬이 없습니다. 관리자에서 씬을 생성해주세요.' },
+    }],
+  };
+}
 
-    function onScroll() {
-        if (!parallaxBg) return;
-        requestAnimationFrame(function () {
-            parallaxBg.style.transform = 'translateY(' + (window.scrollY * speed) + 'px)';
-        });
-    }
+function patchLayerLocal(layerId, patch) {
+  store.patchLayer(layerId, patch, { markDirty: true, recordUndo: false });
+  render();
+}
 
-    if (parallaxBg) {
-        window.addEventListener('scroll', onScroll, { passive: true });
-    }
+function getLayerById(layerId) {
+  const state = store.getState();
+  return state.layers.find((layer) => String(layer.id) === String(layerId));
+}
 
-    // ── 시계 위젯 ────────────────────────────────────────────────
-    var DAYS   = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-    var MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
-                  'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+function render() {
+  const state = store.getState();
+  teardownDynamicWidgets(root);
+  renderScene(root, { ...state.scene, layers: state.layers }, {
+    selectedLayerId: state.selectedLayerId,
+    afterRender(layers) {
+      if (parallaxEngine) parallaxEngine.disposeParallaxEngine();
+      parallaxEngine = initParallaxEngine(root, layers, { sensitivity: 1, maxOffset: 42 });
+    },
+  });
+}
 
-    function pad(n) { return String(n).padStart(2, '0'); }
+(async function boot() {
+  const scene = await loadActiveScene();
+  store.setScene(scene);
+  render();
 
-    function tick() {
-        var clockTime = document.getElementById('clock-time');
-        var clockDate = document.getElementById('clock-date');
-        if (!clockTime || !clockDate) return;
-        var now  = new Date();
-        var h    = pad(now.getHours());
-        var m    = pad(now.getMinutes());
-        var s    = pad(now.getSeconds());
-        var day  = DAYS[now.getDay()];
-        var date = pad(now.getDate());
-        var mon  = MONTHS[now.getMonth()];
-        var yr   = now.getFullYear();
-        clockTime.textContent = h + ':' + m + ':' + s;
-        clockDate.textContent = day + ' ' + date + ' ' + mon + ' ' + yr;
-    }
+  const stickerController = createStickerEditController({
+    root,
+    getLayerById,
+    patchLayerLocal,
+    savePatch: async (layerId, patch) => editor?.saveLayerPatch(layerId, patch),
+  });
 
-    tick();
-    setInterval(tick, 1000);
-}());
+  if (isAdmin) {
+    editor = initEditorPanel({
+      store,
+      root,
+      render,
+      onStickerToggle: async () => {
+        const enabled = await stickerController.toggleStickerEditMode();
+        store.setStickerEditMode(enabled);
+        return enabled;
+      },
+    });
+  }
+
+  window.addEventListener('beforeunload', () => {
+    if (parallaxEngine) parallaxEngine.disposeParallaxEngine();
+    teardownDynamicWidgets(root);
+  });
+})();

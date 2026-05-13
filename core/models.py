@@ -1,106 +1,141 @@
+from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 
-class IndexImage(models.Model):
-    LAYER_BACKGROUND = 'background'
-    LAYER_MAIN = 'main'
-    LAYER_STICKER = 'sticker'
-    LAYER_CHOICES = [
-        (LAYER_BACKGROUND, 'Background (Parallax)'),
-        (LAYER_MAIN, 'Main'),
-        (LAYER_STICKER, 'Sticker'),
+class PageScene(models.Model):
+    VIEWPORT_DESKTOP = 'desktop'
+    VIEWPORT_MOBILE = 'mobile'
+    VIEWPORT_BOTH = 'both'
+    VIEWPORT_CHOICES = [
+        (VIEWPORT_DESKTOP, 'Desktop'),
+        (VIEWPORT_MOBILE, 'Mobile'),
+        (VIEWPORT_BOTH, 'Both'),
     ]
 
-    title     = models.CharField(max_length=100, blank=True)
-    image     = models.ImageField(upload_to='core/images/')
-    layer     = models.CharField(max_length=20, choices=LAYER_CHOICES, default=LAYER_MAIN)
-    order     = models.PositiveIntegerField(default=0)
-    is_active = models.BooleanField(default=True)
-
-    # 스티커 전용 배치 필드 (다른 layer에서는 무시됨)
-    pos_left  = models.CharField(max_length=20, default='50%')
-    pos_top   = models.CharField(max_length=20, default='50%')
-    width     = models.CharField(max_length=20, default='160px')
-    height    = models.CharField(max_length=20, default='auto')
-    rotate    = models.IntegerField(default=0)
-    z_index   = models.PositiveIntegerField(default=10)
+    name = models.CharField(max_length=120)
+    is_active = models.BooleanField(default=False)
+    viewport_mode = models.CharField(max_length=20, choices=VIEWPORT_CHOICES, default=VIEWPORT_BOTH)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['layer', 'order', 'z_index']
+        ordering = ['-is_active', 'id']
 
     def __str__(self):
-        return f"[{self.get_layer_display()}] {self.title or self.image.name} (#{self.order})"
+        return self.name
+
+
+class MediaAsset(models.Model):
+    KIND_CHOICES = [
+        ('background', 'Background'),
+        ('main', 'Main'),
+        ('parallax', 'Parallax'),
+        ('sticker', 'Sticker'),
+        ('generic', 'Generic'),
+    ]
+
+    kind = models.CharField(max_length=30, choices=KIND_CHOICES, default='generic')
+    mime_type = models.CharField(max_length=100)
+    storage_path = models.CharField(max_length=400)
+    width = models.PositiveIntegerField()
+    height = models.PositiveIntegerField()
+    bytes = models.BigIntegerField()
+    hash_sha256 = models.CharField(max_length=64)
+    original_deleted_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'{self.kind}:{self.storage_path}'
+
+
+class SceneLayer(models.Model):
+    TYPE_BG_IMAGE = 'bg_image'
+    TYPE_PARALLAX_FAR = 'parallax_far'
+    TYPE_BG_TEXT = 'bg_text'
+    TYPE_MAIN_IMAGE = 'main_image'
+    TYPE_TEXT = 'text'
+    TYPE_CLOCK = 'clock'
+    TYPE_MENU_BUTTON = 'menu_button'
+    TYPE_STICKER = 'sticker'
+    TYPE_PARALLAX_NEAR = 'parallax_near'
+    TYPE_PARALLAX_ULTRA_NEAR = 'parallax_ultra_near'
+
+    LAYER_TYPE_CHOICES = [
+        (TYPE_BG_IMAGE, 'Background Image'),
+        (TYPE_PARALLAX_FAR, 'Parallax Far'),
+        (TYPE_BG_TEXT, 'Background Text'),
+        (TYPE_MAIN_IMAGE, 'Main Image'),
+        (TYPE_TEXT, 'Text'),
+        (TYPE_CLOCK, 'Clock'),
+        (TYPE_MENU_BUTTON, 'Menu Button'),
+        (TYPE_STICKER, 'Sticker'),
+        (TYPE_PARALLAX_NEAR, 'Parallax Near'),
+        (TYPE_PARALLAX_ULTRA_NEAR, 'Parallax Ultra Near'),
+    ]
+
+    TYPE_TIER_MAP = {
+        TYPE_BG_IMAGE: -3,
+        TYPE_PARALLAX_FAR: -2,
+        TYPE_BG_TEXT: -1,
+        TYPE_MAIN_IMAGE: 0,
+        TYPE_TEXT: 1,
+        TYPE_CLOCK: 1,
+        TYPE_MENU_BUTTON: 1,
+        TYPE_STICKER: 2,
+        TYPE_PARALLAX_NEAR: 3,
+        TYPE_PARALLAX_ULTRA_NEAR: 4,
+    }
+
+    scene = models.ForeignKey(PageScene, on_delete=models.CASCADE, related_name='layers')
+    layer_type = models.CharField(max_length=40, choices=LAYER_TYPE_CHOICES)
+    layer_tier = models.IntegerField(validators=[MinValueValidator(-3), MaxValueValidator(4)])
+    z_index = models.PositiveIntegerField(default=0)
+    enabled = models.BooleanField(default=True)
+
+    x = models.FloatField(default=0, validators=[MinValueValidator(0.0)])
+    y = models.FloatField(default=0, validators=[MinValueValidator(0.0)])
+    width = models.FloatField(default=200, validators=[MinValueValidator(0.0)])
+    height = models.FloatField(default=200, validators=[MinValueValidator(0.0)])
+
+    rotation_deg = models.FloatField(default=0)
+    scale = models.FloatField(default=1, validators=[MinValueValidator(0.01)])
+    opacity = models.FloatField(default=1, validators=[MinValueValidator(0), MaxValueValidator(1)])
+
+    settings_json = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['layer_tier', 'z_index', 'id']
+
+    def clean(self):
+        expected_tier = self.TYPE_TIER_MAP.get(self.layer_type)
+        if expected_tier is None:
+            raise ValidationError({'layer_type': 'unsupported layer_type'})
+        if self.layer_tier != expected_tier:
+            raise ValidationError({'layer_tier': f'layer_tier must be {expected_tier} for {self.layer_type}'})
+        if self.layer_type == self.TYPE_STICKER and not (0 <= self.z_index <= 999):
+            raise ValidationError({'z_index': 'sticker z_index must be in range 0..999'})
 
     def save(self, *args, **kwargs):
-        if self.pk:
-            try:
-                old = IndexImage.objects.get(pk=self.pk)
-                if old.image != self.image:
-                    self._convert_image()
-            except IndexImage.DoesNotExist:
-                pass  # 신규 저장으로 처리됨 (pk가 지정되어 있어도 아직 DB에 없는 경우)
-        else:
-            self._convert_image()
+        self.layer_tier = self.TYPE_TIER_MAP[self.layer_type]
+        self.full_clean()
         super().save(*args, **kwargs)
 
-    def _convert_image(self):
-        from .utils import convert_to_webp
-        if self.image and not str(self.image.name).endswith('.webp'):
-            webp_file = convert_to_webp(self.image)
-            self.image.save(webp_file.name, webp_file, save=False)
-
-
-class TextBlock(models.Model):
-    POSITION_BG = 'bg_text'
-    POSITION_BLOCK1 = 'block1'
-    POSITION_BLOCK2 = 'block2'
-    POSITION_BLOCK3 = 'block3'
-    POSITION_CHOICES = [
-        (POSITION_BG, 'Background Text'),
-        (POSITION_BLOCK1, 'Text Block 1'),
-        (POSITION_BLOCK2, 'Text Block 2'),
-        (POSITION_BLOCK3, 'Text Block 3'),
-    ]
-
-    position  = models.CharField(max_length=20, choices=POSITION_CHOICES, default=POSITION_BLOCK1)
-    content   = models.TextField()
-    is_active = models.BooleanField(default=True)
-
-    # 신규: 절대 좌표 배치
-    pos_left  = models.CharField(max_length=20, default='5%')
-    pos_top   = models.CharField(max_length=20, default='5%')
-    font_size = models.CharField(max_length=20, default='1rem')
-    color     = models.CharField(max_length=20, default='#ffffff')
-    z_index   = models.PositiveIntegerField(default=20)
-
     def __str__(self):
-        return self.get_position_display()
+        return f'{self.scene_id}:{self.layer_type}({self.z_index})'
 
 
-class ParallaxConfig(models.Model):
-    """패럴랙스 배경 이미지 레이어별 설정값 (단일 레코드 운용)"""
-    speed           = models.FloatField(default=0.4)
-    blur_px         = models.IntegerField(default=0)
-    overlay_opacity = models.FloatField(default=0.3)
+class EditorRevision(models.Model):
+    scene = models.ForeignKey(PageScene, on_delete=models.CASCADE, related_name='revisions')
+    snapshot_json = models.JSONField(default=dict)
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        verbose_name = 'Parallax Config'
+        ordering = ['-created_at']
 
     def __str__(self):
-        return f'ParallaxConfig (speed={self.speed})'
-
-
-class ClockWidgetConfig(models.Model):
-    """시계 위젯 위치/스타일 설정 (단일 레코드)"""
-    is_active = models.BooleanField(default=True)
-    pos_left  = models.CharField(max_length=20, default='2%')
-    pos_top   = models.CharField(max_length=20, default='2%')
-    font_size = models.CharField(max_length=20, default='1rem')
-    color     = models.CharField(max_length=20, default='#ffffff')
-    z_index   = models.PositiveIntegerField(default=30)
-
-    class Meta:
-        verbose_name = 'Clock Widget Config'
-
-    def __str__(self):
-        return f'ClockWidgetConfig (active={self.is_active})'
+        return f'Revision#{self.pk} scene={self.scene_id}'

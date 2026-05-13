@@ -21,12 +21,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-2*#p2y0-a4m-ibw!#u)w_l!zeqpv=1^stvjsj_0^5bzoos@lvj'
+SECRET_KEY = os.environ.get(
+    'SECRET_KEY',
+    'django-insecure-2*#p2y0-a4m-ibw!#u)w_l!zeqpv=1^stvjsj_0^5bzoos@lvj',
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'True').lower() not in ('false', '0', 'no')
 
-ALLOWED_HOSTS = ['129.146.119.161', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = os.environ.get(
+    'ALLOWED_HOSTS',
+    '129.146.119.161,localhost,127.0.0.1',
+).split(',')
 
 
 # Application definition
@@ -79,6 +85,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+<<<<<<< HEAD
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -87,8 +94,27 @@ DATABASES = {
         'PASSWORD': 'password123',
         'HOST': 'db', # Docker compose를 쓴다면 서비스 이름
         'PORT': '5432',
+=======
+_DB_ENGINE = os.environ.get('DB_ENGINE', 'django.db.backends.sqlite3')
+if _DB_ENGINE == 'django.db.backends.sqlite3':
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': _DB_ENGINE,
+            'NAME': os.environ.get('DB_NAME', 'toybox_db'),
+            'USER': os.environ.get('DB_USER', 'admin'),
+            'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+            'HOST': os.environ.get('DB_HOST', 'db'),
+            'PORT': os.environ.get('DB_PORT', '5432'),
+        }
+>>>>>>> 10945b8b8d6f8710cd8cf07aafa6465409e41ff0
+    }
 
 
 # Password validation
@@ -126,6 +152,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

@@ -1,0 +1,126 @@
+import { getRenderZ, getTierForType } from './layer-registry.js';
+import { startClockWidget, stopClockWidget } from './clock-widget.js';
+import { createMenuButtonLayer } from './menu-button-widget.js';
+
+export function normalizeLayer(layer) {
+  const normalized = {
+    ...layer,
+    layer_tier: layer.layer_tier ?? getTierForType(layer.layer_type),
+    z_index: Number(layer.z_index ?? 0),
+    x: Number(layer.x ?? 0),
+    y: Number(layer.y ?? 0),
+    width: Number(layer.width ?? 200),
+    height: Number(layer.height ?? 200),
+    rotation_deg: Number(layer.rotation_deg ?? 0),
+    scale: Number(layer.scale ?? 1),
+    opacity: Number(layer.opacity ?? 1),
+    enabled: layer.enabled !== false,
+    settings_json: layer.settings_json || {},
+  };
+
+  const expectedTier = getTierForType(normalized.layer_type);
+  if (expectedTier !== undefined && normalized.layer_tier !== expectedTier) {
+    normalized.layer_tier = expectedTier;
+  }
+  return normalized;
+}
+
+export function sortLayersForRender(layers) {
+  return [...layers].sort((a, b) => {
+    if (a.layer_tier !== b.layer_tier) return a.layer_tier - b.layer_tier;
+    if (a.z_index !== b.z_index) return a.z_index - b.z_index;
+    return String(a.id).localeCompare(String(b.id), undefined, { numeric: true });
+  });
+}
+
+export function applyLayerStyle(el, layer) {
+  el.style.position = 'absolute';
+  el.style.left = `${layer.x}px`;
+  el.style.top = `${layer.y}px`;
+  el.style.width = `${Math.max(0, layer.width)}px`;
+  el.style.height = `${Math.max(0, layer.height)}px`;
+  const baseTransform = `translate(0px, 0px) rotate(${layer.rotation_deg}deg) scale(${layer.scale})`;
+  el.style.transform = baseTransform;
+  el.dataset.baseTransform = baseTransform;
+  el.style.opacity = String(layer.opacity);
+  el.style.zIndex = String(getRenderZ(layer));
+  el.style.pointerEvents = 'auto';
+}
+
+export function createLayerElement(layer) {
+  const el = document.createElement('div');
+  el.className = 'scene-layer';
+  el.dataset.layerId = String(layer.id);
+  el.dataset.layerType = layer.layer_type;
+
+  switch (layer.layer_type) {
+    case 'bg_image':
+    case 'main_image':
+    case 'sticker':
+    case 'parallax_far':
+    case 'parallax_near':
+    case 'parallax_ultra_near': {
+      const img = document.createElement('img');
+      img.alt = layer.settings_json?.alt || layer.layer_type;
+      img.src = layer.settings_json?.asset_url || '';
+      el.appendChild(img);
+      break;
+    }
+    case 'bg_text':
+    case 'text': {
+      el.classList.add('scene-layer--text');
+      el.textContent = layer.settings_json?.text || '';
+      if (layer.settings_json?.color) el.style.color = layer.settings_json.color;
+      if (layer.settings_json?.font_size) el.style.fontSize = layer.settings_json.font_size;
+      if (layer.settings_json?.letter_spacing) el.style.letterSpacing = layer.settings_json.letter_spacing;
+      if (layer.settings_json?.line_height) el.style.lineHeight = String(layer.settings_json.line_height);
+      if (layer.settings_json?.text_shadow) el.style.textShadow = layer.settings_json.text_shadow;
+      break;
+    }
+    case 'clock': {
+      el.classList.add('scene-layer--clock');
+      startClockWidget(layer.id, el, layer.settings_json || {});
+      break;
+    }
+    case 'menu_button': {
+      el.classList.add('scene-layer--menu-button');
+      el.appendChild(createMenuButtonLayer(layer));
+      break;
+    }
+    default:
+      el.textContent = `[Unsupported ${layer.layer_type}]`;
+  }
+
+  return el;
+}
+
+export function renderScene(root, scene, options = {}) {
+  root.innerHTML = '';
+  const layers = sortLayersForRender((scene.layers || []).map(normalizeLayer)).filter((layer) => layer.enabled);
+  if (!layers.length) {
+    const fallback = document.createElement('div');
+    fallback.className = 'fallback-empty';
+    fallback.textContent = '씬이 비어 있습니다. 관리자 패널에서 레이어를 추가하세요.';
+    root.appendChild(fallback);
+    return;
+  }
+
+  for (const layer of layers) {
+    const el = createLayerElement(layer);
+    applyLayerStyle(el, layer);
+    if (options.selectedLayerId != null && String(layer.id) === String(options.selectedLayerId)) {
+      el.classList.add('scene-layer--selected');
+    }
+    root.appendChild(el);
+  }
+
+  if (typeof options.afterRender === 'function') {
+    options.afterRender(layers);
+  }
+}
+
+export function teardownDynamicWidgets(root) {
+  root.querySelectorAll(".scene-layer[data-layer-type='clock']").forEach((el) => {
+    stopClockWidget(Number(el.dataset.layerId));
+  });
+}
