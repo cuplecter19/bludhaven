@@ -497,8 +497,6 @@ def validate_sticker_z(value):
         raise ValueError(f'sticker z_index must be in range {STICKER_Z_MIN}..{STICKER_Z_MAX}')
 
 
-
-
 def transcode_to_webp(image, quality):
     output = io.BytesIO()
     img = image.copy()
