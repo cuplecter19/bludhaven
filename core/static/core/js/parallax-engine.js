@@ -1,5 +1,3 @@
-let rafId = null;
-
 export function initParallaxEngine(container, layers, options = {}) {
   const state = {
     targetX: 0,
@@ -28,7 +26,11 @@ export function initParallaxEngine(container, layers, options = {}) {
     state.targetY = dy;
   };
 
+  let rafId = null;
+  let disposed = false;
+
   function tickParallaxFrame() {
+    if (disposed) return;
     state.currentX += (state.targetX - state.currentX) * 0.08;
     state.currentY += (state.targetY - state.currentY) * 0.08;
 
@@ -45,8 +47,12 @@ export function initParallaxEngine(container, layers, options = {}) {
 
   return {
     disposeParallaxEngine() {
+      disposed = true;
       window.removeEventListener('mousemove', onMouseMove);
-      if (rafId) cancelAnimationFrame(rafId);
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
     },
   };
 }

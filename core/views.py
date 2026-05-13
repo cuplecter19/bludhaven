@@ -1,5 +1,6 @@
 import hashlib
 import io
+import logging
 import os
 import tempfile
 import uuid
@@ -8,7 +9,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.db import transaction
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from PIL import Image, ImageOps, UnidentifiedImageError
@@ -18,6 +19,18 @@ from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 
 from .models import EditorRevision, MediaAsset, PageScene, SceneLayer
+
+logger = logging.getLogger(__name__)
+
+ALLOWED_MIME_TYPES = {'image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif'}
+
+MAGIC_BYTES = {
+    b'\xff\xd8\xff': 'image/jpeg',
+    b'\x89PNG': 'image/png',
+    b'RIFF': 'image/webp',
+    b'\x00\x00\x00': None,   # avif/heic starts with ftyp box – checked separately
+    b'GIF8': 'image/gif',
+}
 
 
 TIER_BASE_MAP = {
@@ -33,6 +46,10 @@ TIER_BASE_MAP = {
 
 STICKER_Z_MIN = 0
 STICKER_Z_MAX = 999
+
+
+def healthz(request):
+    return HttpResponse('ok', content_type='text/plain')
 
 
 def index(request):
@@ -161,8 +178,8 @@ def upload_asset(request):
 
     try:
         validate_upload(file)
-    except ValueError as exc:
-        return bad_request('FILE_TOO_LARGE', str(exc))
+    except ValueError:
+        return bad_request('FILE_TOO_LARGE', '')
 
     original_tmp_path = None
     variants_payload = {}
@@ -174,6 +191,11 @@ def upload_asset(request):
 
         with open(original_tmp_path, 'rb') as f:
             original_bytes = f.read()
+
+        try:
+            validate_file_magic_bytes(original_bytes, file.name, file.content_type)
+        except ValueError:
+            return bad_request('UNSUPPORTED_FORMAT', '')
 
         image = Image.open(io.BytesIO(original_bytes))
         image = ImageOps.exif_transpose(image)
@@ -193,8 +215,11 @@ def upload_asset(request):
                 avif_bytes = transcode_to_avif(variant, quality=48)
                 avif_path = default_storage.save(f'{base_key}_{name}.avif', ContentFile(avif_bytes))
                 saved_paths[f'{name}_avif'] = avif_path
-            except Exception:
-                pass
+            except Exception as avif_exc:
+                logger.warning(
+                    'AVIF transcode failed for variant=%s name=%s mime=%s: %s',
+                    name, file.name, file.content_type, avif_exc,
+                )
 
         media = MediaAsset.objects.create(
             kind=kind,
@@ -210,11 +235,13 @@ def upload_asset(request):
             k: default_storage.url(v) for k, v in saved_paths.items()
         }
     except UnidentifiedImageError:
-        return bad_request('UNSUPPORTED_FORMAT', 'Unsupported image format')
-    except OSError:
-        return bad_request('TRANSCODE_FAILED', 'Image transcode failed')
-    except Exception:
-        return bad_request('UPLOAD_FAILED', 'Asset upload failed')
+        return bad_request('UNSUPPORTED_FORMAT', '')
+    except OSError as os_exc:
+        logger.error('Image transcode failed for %s: %s', file.name, os_exc)
+        return bad_request('TRANSCODE_FAILED', '')
+    except Exception as exc:
+        logger.error('Asset upload failed for %s: %s', file.name, exc)
+        return bad_request('UPLOAD_FAILED', '')
     finally:
         if original_tmp_path:
             purge_original(original_tmp_path)
@@ -426,6 +453,26 @@ def validate_upload(file):
     max_bytes = 15 * 1024 * 1024
     if file.size > max_bytes:
         raise ValueError('File exceeds size limit')
+
+
+def validate_file_magic_bytes(data: bytes, filename: str, content_type: str) -> None:
+    header = data[:12]
+    # JPEG
+    if header[:3] == b'\xff\xd8\xff':
+        return
+    # PNG
+    if header[:4] == b'\x89PNG':
+        return
+    # GIF
+    if header[:4] in (b'GIF8', b'GIF9'):
+        return
+    # WebP: RIFF....WEBP
+    if header[:4] == b'RIFF' and header[8:12] == b'WEBP':
+        return
+    # AVIF / HEIF: ftyp box (bytes 4-8)
+    if header[4:8] in (b'ftyp', b'mif1', b'heic', b'heix', b'avif', b'avis'):
+        return
+    raise ValueError(f'Unsupported file format: {filename!r} ({content_type})')
 
 
 def parse_layer_numeric_fields(data):

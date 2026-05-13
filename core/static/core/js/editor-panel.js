@@ -124,8 +124,11 @@ export function initEditorPanel({ store, root, render, onStickerToggle }) {
       st = rect.top;
 
       const onMove = (ev) => {
-        panel.style.left = `${sl + ev.clientX - sx}px`;
-        panel.style.top = `${st + ev.clientY - sy}px`;
+        const rect = panel.getBoundingClientRect();
+        const newLeft = Math.max(0, Math.min(window.innerWidth - rect.width, sl + ev.clientX - sx));
+        const newTop = Math.max(0, Math.min(window.innerHeight - 40, st + ev.clientY - sy));
+        panel.style.left = `${newLeft}px`;
+        panel.style.top = `${newTop}px`;
         panel.style.right = 'auto';
       };
       const onUp = () => {

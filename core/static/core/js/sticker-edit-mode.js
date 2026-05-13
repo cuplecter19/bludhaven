@@ -30,18 +30,27 @@ export function createStickerEditController({
 
     controls.append(zDown, badge, zUp);
 
-    const resizeHandle = document.createElement('div');
-    resizeHandle.className = 'sticker-resize-handle';
-
     const rotateHandle = document.createElement('div');
     rotateHandle.className = 'sticker-rotate-handle';
 
-    stickerEl.append(controls, resizeHandle, rotateHandle);
+    stickerEl.append(controls, rotateHandle);
 
     zUp.addEventListener('click', () => incrementStickerZ(layer.id, badge));
     zDown.addEventListener('click', () => decrementStickerZ(layer.id, badge));
 
-    bindStickerResizeHandle(stickerEl, layer, resizeHandle);
+    const corners = [
+      { cls: 'sticker-resize-handle sticker-resize-handle--nw', dx: -1, dy: -1 },
+      { cls: 'sticker-resize-handle sticker-resize-handle--ne', dx:  1, dy: -1 },
+      { cls: 'sticker-resize-handle sticker-resize-handle--sw', dx: -1, dy:  1 },
+      { cls: 'sticker-resize-handle sticker-resize-handle--se', dx:  1, dy:  1 },
+    ];
+    for (const corner of corners) {
+      const handle = document.createElement('div');
+      handle.className = corner.cls;
+      stickerEl.appendChild(handle);
+      bindStickerResizeHandle(stickerEl, layer, handle, corner.dx, corner.dy);
+    }
+
     bindStickerRotateHandle(stickerEl, layer, rotateHandle);
   }
 
@@ -63,11 +72,13 @@ export function createStickerEditController({
     badge.textContent = `z:${next}`;
   }
 
-  function bindStickerResizeHandle(stickerEl, layer, handleEl) {
+  function bindStickerResizeHandle(stickerEl, layer, handleEl, dirX, dirY) {
     let startX = 0;
     let startY = 0;
     let startW = 0;
     let startH = 0;
+    let startLeft = 0;
+    let startTop = 0;
 
     handleEl.addEventListener('pointerdown', (e) => {
       e.preventDefault();
@@ -76,10 +87,12 @@ export function createStickerEditController({
       startY = e.clientY;
       startW = layer.width;
       startH = layer.height;
+      startLeft = layer.x;
+      startTop = layer.y;
 
       const onMove = (ev) => {
-        const dx = ev.clientX - startX;
-        const dy = ev.clientY - startY;
+        const dx = (ev.clientX - startX) * dirX;
+        const dy = (ev.clientY - startY) * dirY;
         const keepRatio = ev.shiftKey;
         let nextW = Math.max(20, startW + dx);
         let nextH = Math.max(20, startH + dy);
@@ -87,7 +100,10 @@ export function createStickerEditController({
           const ratio = startW / Math.max(startH, 1);
           nextH = nextW / ratio;
         }
-        patchLayerLocal(layer.id, { width: nextW, height: nextH });
+        const patch = { width: nextW, height: nextH };
+        if (dirX < 0) patch.x = Math.max(0, startLeft + (startW - nextW));
+        if (dirY < 0) patch.y = Math.max(0, startTop + (startH - nextH));
+        patchLayerLocal(layer.id, patch);
         dirtyStickerMap.set(layer.id, true);
       };
 
