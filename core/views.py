@@ -67,7 +67,7 @@ def sticker_update(request, pk):
     return Response({'ok': True, 'data': _sticker_data(sticker)})
 
 
-@api_view(['DELETE', 'POST'])
+@api_view(['DELETE'])
 @permission_classes([IsAdminUser])
 def sticker_delete(request, pk):
     sticker = get_object_or_404(IndexImage, pk=pk, layer=IndexImage.LAYER_STICKER)

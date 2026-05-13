@@ -38,7 +38,7 @@ class IndexImage(models.Model):
                 if old.image != self.image:
                     self._convert_image()
             except IndexImage.DoesNotExist:
-                self._convert_image()
+                pass  # 신규 저장으로 처리됨 (pk가 지정되어 있어도 아직 DB에 없는 경우)
         else:
             self._convert_image()
         super().save(*args, **kwargs)

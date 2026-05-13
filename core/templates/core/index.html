@@ -63,7 +63,7 @@
              style="left:{{ sticker.pos_left }};top:{{ sticker.pos_top }};width:{{ sticker.width }};height:{{ sticker.height }};transform:rotate({{ sticker.rotate }}deg);z-index:{{ sticker.z_index }};">
             <img src="{{ sticker.image.url }}" alt="{{ sticker.title }}" draggable="false">
             {% if is_admin %}
-            <div class="sticker-handle" title="드래그하여 이동">⠿</div>
+            <div class="sticker-handle" title="드래그하여 이동" aria-label="스티커 이동 핸들">⠿</div>
             {% endif %}
         </div>
         {% endfor %}
