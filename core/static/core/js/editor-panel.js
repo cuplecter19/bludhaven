@@ -72,16 +72,37 @@ export function initEditorPanel({ store, root, render, onStickerToggle }) {
     }
   }
 
-  function fillLayerProps(layer) {
-    for (const [key, id] of Object.entries(propIds)) {
-      const input = document.getElementById(id);
-      if (!input) continue;
-      if (key === 'text') input.value = layer?.settings_json?.text ?? '';
-      else if (key === 'url') input.value = layer?.settings_json?.url ?? '';
-      else if (key === 'asset_url') input.value = layer?.settings_json?.asset_url ?? '';
-      else input.value = layer?.[key] ?? '';
-    }
-  }
+  // 기존 fillLayerProps 교체
+function fillLayerProps(layer) {
+  if (!layer) return;
+  const s = layer.settings_json || {};
+
+  // 좌표/크기는 값+단위 문자열로 표시 (ex: "50%", "200px")
+  document.getElementById('prop-x').value      = `${layer.x}${s.x_unit || 'px'}`;
+  document.getElementById('prop-y').value      = `${layer.y}${s.y_unit || 'px'}`;
+  document.getElementById('prop-width').value  = `${layer.width}${s.width_unit || 'px'}`;
+  document.getElementById('prop-height').value = `${layer.height}${s.height_unit || 'px'}`;
+
+  document.getElementById('prop-rotation').value = layer.rotation_deg ?? 0;
+  document.getElementById('prop-scale').value    = layer.scale ?? 1;
+  document.getElementById('prop-opacity').value  = layer.opacity ?? 1;
+  document.getElementById('prop-z').value        = layer.z_index ?? 0;
+  document.getElementById('prop-text').value     = s.text  ?? '';
+  document.getElementById('prop-url').value      = s.url   ?? '';
+  document.getElementById('prop-asset').value    = s.asset_url ?? '';
+
+  // fit 셀렉트 반영
+  const fitSelect = document.getElementById('prop-fit');
+  if (fitSelect) fitSelect.value = s.fit || 'cover';
+}
+
+function parseUnitValue(str, fallbackUnit = 'px') {
+  const s = String(str ?? '').trim();
+  if (s.endsWith('%'))  return { value: parseFloat(s) || 0, unit: '%'  };
+  if (s.endsWith('px')) return { value: parseFloat(s) || 0, unit: 'px' };
+  // 단위 없이 숫자만 입력하면 fallback 단위 사용
+  return { value: parseFloat(s) || 0, unit: fallbackUnit };
+}
 
   function syncDirty(state) {
     dirtyEl.textContent = state.isDirty ? 'Dirty' : 'Saved';
@@ -165,31 +186,45 @@ export function initEditorPanel({ store, root, render, onStickerToggle }) {
   });
 
   document.getElementById('prop-apply-btn').addEventListener('click', async () => {
-    clearError();
-    const layer = getSelectedLayer();
-    if (!layer) return;
-    const patch = {
-      x: Number(document.getElementById(propIds.x).value || 0),
-      y: Number(document.getElementById(propIds.y).value || 0),
-      width: Number(document.getElementById(propIds.width).value || 0),
-      height: Number(document.getElementById(propIds.height).value || 0),
-      rotation_deg: Number(document.getElementById(propIds.rotation_deg).value || 0),
-      scale: Number(document.getElementById(propIds.scale).value || 1),
-      opacity: Number(document.getElementById(propIds.opacity).value || 1),
-      z_index: Number(document.getElementById(propIds.z_index).value || 0),
-      settings_json: {
-        ...(layer.settings_json || {}),
-        text: document.getElementById(propIds.text).value,
-        url: document.getElementById(propIds.url).value,
-        asset_url: document.getElementById(propIds.asset_url).value,
-      },
-    };
+  clearError();
+  const layer = getSelectedLayer();
+  if (!layer) return;
+  const s = layer.settings_json || {};
 
-    const res = await api(`/api/editor/layers/${layer.id}`, { method: 'PATCH', body: patch });
-    if (!res.ok) return showError(res.error || 'layer patch failed');
-    store.patchLayer(layer.id, res.data, { recordUndo: true, markDirty: true });
-    render();
-  });
+  const px = parseUnitValue(document.getElementById('prop-x').value,     s.x_unit      || 'px');
+  const py = parseUnitValue(document.getElementById('prop-y').value,     s.y_unit      || 'px');
+  const pw = parseUnitValue(document.getElementById('prop-width').value,  s.width_unit  || 'px');
+  const ph = parseUnitValue(document.getElementById('prop-height').value, s.height_unit || 'px');
+
+  const patch = {
+    x:            px.value,
+    y:            py.value,
+    width:        pw.value,
+    height:       ph.value,
+    rotation_deg: Number(document.getElementById('prop-rotation').value || 0),
+    scale:        Number(document.getElementById('prop-scale').value    || 1),
+    opacity:      Number(document.getElementById('prop-opacity').value  || 1),
+    z_index:      Number(document.getElementById('prop-z').value        || 0),
+    settings_json: {
+      ...s,
+      // 단위 저장
+      x_unit:      px.unit,
+      y_unit:      py.unit,
+      width_unit:  pw.unit,
+      height_unit: ph.unit,
+      // 기타 설정
+      fit:         document.getElementById('prop-fit')?.value || s.fit || 'cover',
+      text:        document.getElementById('prop-text').value,
+      url:         document.getElementById('prop-url').value,
+      asset_url:   document.getElementById('prop-asset').value,
+    },
+  };
+
+  const res = await api(`/api/editor/layers/${layer.id}`, { method: 'PATCH', body: patch });
+  if (!res.ok) return showError(res.error || 'layer patch failed');
+  store.patchLayer(layer.id, res.data, { recordUndo: true, markDirty: true });
+  render();
+});
 
   document.getElementById('layer-delete-btn').addEventListener('click', async () => {
     const layer = getSelectedLayer();

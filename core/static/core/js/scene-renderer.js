@@ -34,17 +34,34 @@ export function sortLayersForRender(layers) {
 }
 
 export function applyLayerStyle(el, layer) {
+  const s = layer.settings_json || {};
+
+  // 단위 결정 (없으면 px 폴백)
+  const xu = s.x_unit      || 'px';
+  const yu = s.y_unit      || 'px';
+  const wu = s.width_unit  || 'px';
+  const hu = s.height_unit || 'px';
+
   el.style.position = 'absolute';
-  el.style.left = `${layer.x}px`;
-  el.style.top = `${layer.y}px`;
-  el.style.width = `${Math.max(0, layer.width)}px`;
-  el.style.height = `${Math.max(0, layer.height)}px`;
+  el.style.left     = `${layer.x}${xu}`;
+  el.style.top      = `${layer.y}${yu}`;
+  el.style.width    = `${Math.max(0, layer.width)}${wu}`;
+  el.style.height   = `${Math.max(0, layer.height)}${hu}`;
+
   const baseTransform = `translate(0px, 0px) rotate(${layer.rotation_deg}deg) scale(${layer.scale})`;
-  el.style.transform = baseTransform;
+  el.style.transform      = baseTransform;
   el.dataset.baseTransform = baseTransform;
-  el.style.opacity = String(layer.opacity);
-  el.style.zIndex = String(getRenderZ(layer));
+  el.style.opacity     = String(layer.opacity);
+  el.style.zIndex      = String(getRenderZ(layer));
   el.style.pointerEvents = 'auto';
+
+  // 이미지 레이어: fit 설정 적용
+  const imageTypes = ['bg_image', 'main_image', 'parallax_far', 'parallax_near', 'parallax_ultra_near', 'sticker'];
+  if (imageTypes.includes(layer.layer_type)) {
+    const fit = s.fit || 'cover';
+    const img = el.querySelector('img');
+    if (img) img.style.objectFit = fit;
+  }
 }
 
 export function createLayerElement(layer) {

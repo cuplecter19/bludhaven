@@ -12,14 +12,14 @@ export const LAYER_TYPE_TIER = {
 };
 
 export const TIER_BASE_Z = {
-  '-3': -30000,
-  '-2': -20000,
-  '-1': -10000,
-  '0': 0,
-  '1': 10000,
-  '2': 20000,
-  '3': 30000,
-  '4': 40000,
+  '-3': 100,    // bg_image        (기존 -30000)
+  '-2': 200,    // parallax_far    (기존 -20000)
+  '-1': 300,    // bg_text         (기존 -10000)
+   '0': 400,    // main_image      (기존 0)
+   '1': 500,    // text/clock/menu (기존 10000)
+   '2': 600,    // sticker         (기존 20000)
+   '3': 700,    // parallax_near   (기존 30000)
+   '4': 800,    // parallax_ultra_near (기존 40000)
 };
 
 export function getTierForType(layerType) {
