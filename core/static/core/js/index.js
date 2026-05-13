@@ -86,5 +86,6 @@ function render() {
 
   window.addEventListener('beforeunload', () => {
     if (parallaxEngine) parallaxEngine.disposeParallaxEngine();
+    teardownDynamicWidgets(root);
   });
 })();

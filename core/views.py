@@ -4,6 +4,7 @@ import os
 import tempfile
 import uuid
 
+from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.db import transaction
@@ -30,6 +31,9 @@ TIER_BASE_MAP = {
     4: 40000,
 }
 
+STICKER_Z_MIN = 0
+STICKER_Z_MAX = 999
+
 
 def index(request):
     return render(request, 'core/index.html', {'is_admin': request.user.is_staff})
@@ -53,23 +57,28 @@ def create_layer(request):
 
     scene = get_object_or_404(PageScene, pk=scene_id)
     try:
+        parsed = parse_layer_numeric_fields(request.data)
+        if layer_type == SceneLayer.TYPE_STICKER:
+            validate_sticker_z(parsed.get('z_index', 0))
         layer = SceneLayer(
             scene=scene,
             layer_type=layer_type,
-            z_index=int(request.data.get('z_index', 0)),
+            z_index=parsed['z_index'],
             enabled=bool(request.data.get('enabled', True)),
-            x=float(request.data.get('x', 0)),
-            y=float(request.data.get('y', 0)),
-            width=float(request.data.get('width', 200)),
-            height=float(request.data.get('height', 200)),
-            rotation_deg=float(request.data.get('rotation_deg', 0)),
-            scale=float(request.data.get('scale', 1)),
-            opacity=float(request.data.get('opacity', 1)),
+            x=parsed['x'],
+            y=parsed['y'],
+            width=parsed['width'],
+            height=parsed['height'],
+            rotation_deg=parsed['rotation_deg'],
+            scale=parsed['scale'],
+            opacity=parsed['opacity'],
             settings_json=request.data.get('settings_json') or {},
         )
         layer.save()
-    except Exception as exc:
-        return bad_request('VALIDATION_FAILED', str(exc))
+    except (ValidationError, ValueError):
+        return bad_request('VALIDATION_FAILED', '')
+    except Exception:
+        return bad_request('VALIDATION_FAILED', 'Invalid layer payload')
 
     return Response({'ok': True, 'data': serialize_layer(layer)}, status=status.HTTP_201_CREATED)
 
@@ -84,9 +93,6 @@ def patch_layer(request, layer_id):
         if requested != expected:
             return bad_request('INVALID_TIER', f'layer_tier for {layer.layer_type} must be {expected}')
 
-    if layer.layer_type == SceneLayer.TYPE_STICKER and 'layer_tier' in request.data:
-        return bad_request('INVALID_TIER', 'sticker layer_tier is fixed to 2')
-
     mutable_fields = [
         'layer_type', 'z_index', 'enabled', 'x', 'y', 'width', 'height', 'rotation_deg', 'scale', 'opacity', 'settings_json'
     ]
@@ -97,12 +103,16 @@ def patch_layer(request, layer_id):
             value = request.data[field]
             if field in ('z_index',):
                 value = int(value)
+                if (request.data.get('layer_type') or layer.layer_type) == SceneLayer.TYPE_STICKER:
+                    validate_sticker_z(value)
             elif field in ('x', 'y', 'width', 'height', 'rotation_deg', 'scale', 'opacity'):
                 value = float(value)
             setattr(layer, field, value)
         layer.save()
-    except Exception as exc:
-        return bad_request('VALIDATION_FAILED', str(exc))
+    except (ValidationError, ValueError):
+        return bad_request('VALIDATION_FAILED', '')
+    except Exception:
+        return bad_request('VALIDATION_FAILED', 'Invalid layer patch')
 
     return Response({'ok': True, 'data': serialize_layer(layer)})
 
@@ -132,8 +142,10 @@ def reorder_layers(request):
                 updated_ids.append(layer.id)
     except SceneLayer.DoesNotExist:
         raise Http404
-    except Exception as exc:
-        return bad_request('VALIDATION_FAILED', str(exc))
+    except (ValidationError, ValueError):
+        return bad_request('VALIDATION_FAILED', '')
+    except Exception:
+        return bad_request('VALIDATION_FAILED', 'Invalid reorder payload')
 
     layers = list(SceneLayer.objects.filter(id__in=updated_ids))
     return Response({'ok': True, 'data': [serialize_layer(l) for l in layers]})
@@ -201,8 +213,8 @@ def upload_asset(request):
         return bad_request('UNSUPPORTED_FORMAT', 'Unsupported image format')
     except OSError:
         return bad_request('TRANSCODE_FAILED', 'Image transcode failed')
-    except Exception as exc:
-        return bad_request('UPLOAD_FAILED', str(exc))
+    except Exception:
+        return bad_request('UPLOAD_FAILED', 'Asset upload failed')
     finally:
         if original_tmp_path:
             purge_original(original_tmp_path)
@@ -255,8 +267,10 @@ def restore_revision(request, revision_id):
                     opacity=item.get('opacity', 1),
                     settings_json=item.get('settings_json') or {},
                 )
-    except Exception as exc:
-        return bad_request('RESTORE_FAILED', str(exc))
+    except (ValidationError, ValueError):
+        return bad_request('RESTORE_FAILED', '')
+    except Exception:
+        return bad_request('RESTORE_FAILED', 'Revision restore failed')
 
     return Response({'ok': True, 'data': serialize_scene(revision.scene)})
 
@@ -388,13 +402,54 @@ def serialize_asset(asset):
 
 
 def bad_request(error_code, message):
-    return Response({'ok': False, 'error_code': error_code, 'error': message}, status=status.HTTP_400_BAD_REQUEST)
+    safe_messages = {
+        'INVALID_REQUEST': 'Invalid request payload',
+        'INVALID_TIER': 'Invalid layer tier request',
+        'VALIDATION_FAILED': 'Validation failed',
+        'FILE_TOO_LARGE': 'File exceeds size limit',
+        'UNSUPPORTED_FORMAT': 'Unsupported image format',
+        'TRANSCODE_FAILED': 'Image transcode failed',
+        'UPLOAD_FAILED': 'Asset upload failed',
+        'RESTORE_FAILED': 'Revision restore failed',
+    }
+    return Response(
+        {
+            'ok': False,
+            'error_code': error_code,
+            'error': safe_messages.get(error_code, 'Request failed'),
+        },
+        status=status.HTTP_400_BAD_REQUEST,
+    )
 
 
 def validate_upload(file):
     max_bytes = 15 * 1024 * 1024
     if file.size > max_bytes:
         raise ValueError('File exceeds size limit')
+
+
+def parse_layer_numeric_fields(data):
+    parsed = {
+        'z_index': int(data.get('z_index', 0)),
+        'x': float(data.get('x', 0)),
+        'y': float(data.get('y', 0)),
+        'width': float(data.get('width', 200)),
+        'height': float(data.get('height', 200)),
+        'rotation_deg': float(data.get('rotation_deg', 0)),
+        'scale': float(data.get('scale', 1)),
+        'opacity': float(data.get('opacity', 1)),
+    }
+    for axis in ('x', 'y', 'width', 'height'):
+        if parsed[axis] < 0:
+            raise ValueError(f'{axis} must be >= 0')
+    return parsed
+
+
+def validate_sticker_z(value):
+    if not (STICKER_Z_MIN <= value <= STICKER_Z_MAX):
+        raise ValueError(f'sticker z_index must be in range {STICKER_Z_MIN}..{STICKER_Z_MAX}')
+
+
 
 
 def transcode_to_webp(image, quality):

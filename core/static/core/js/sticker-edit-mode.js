@@ -4,6 +4,8 @@ export function createStickerEditController({
   patchLayerLocal,
   savePatch,
 }) {
+  const STICKER_Z_MIN = 0;
+  const STICKER_Z_MAX = 999;
   const dirtyStickerMap = new Map();
   let enabled = false;
 
@@ -46,7 +48,7 @@ export function createStickerEditController({
   function incrementStickerZ(layerId, badge) {
     const layer = getLayerById(layerId);
     if (!layer) return;
-    const next = Math.min(999, (layer.z_index ?? 0) + 1);
+    const next = Math.min(STICKER_Z_MAX, (layer.z_index ?? 0) + 1);
     patchLayerLocal(layerId, { z_index: next });
     dirtyStickerMap.set(layerId, true);
     badge.textContent = `z:${next}`;
@@ -55,7 +57,7 @@ export function createStickerEditController({
   function decrementStickerZ(layerId, badge) {
     const layer = getLayerById(layerId);
     if (!layer) return;
-    const next = Math.max(0, (layer.z_index ?? 0) - 1);
+    const next = Math.max(STICKER_Z_MIN, (layer.z_index ?? 0) - 1);
     patchLayerLocal(layerId, { z_index: next });
     dirtyStickerMap.set(layerId, true);
     badge.textContent = `z:${next}`;

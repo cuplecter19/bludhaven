@@ -200,13 +200,8 @@ export function initEditorPanel({ store, root, render, onStickerToggle }) {
 
   document.getElementById('save-draft-btn').addEventListener('click', async () => {
     clearError();
-    const { scene, layers, viewportMode } = store.getState();
+    const { scene, viewportMode } = store.getState();
     if (!scene?.id) return;
-
-    const sorted = layers.slice().sort((a, b) => a.layer_tier - b.layer_tier || a.z_index - b.z_index || a.id - b.id);
-    const orders = sorted.map((layer, i) => ({ id: layer.id, z_index: i }));
-    const reorderRes = await api('/api/editor/layers/reorder', { method: 'POST', body: { orders } });
-    if (!reorderRes.ok) return showError(reorderRes.error || 'reorder failed');
 
     const sceneRes = await api(`/api/editor/scenes/${scene.id}`, { method: 'PATCH', body: { viewport_mode: viewportMode } });
     if (!sceneRes.ok) return showError(sceneRes.error || 'scene save failed');
@@ -229,9 +224,11 @@ export function initEditorPanel({ store, root, render, onStickerToggle }) {
 
   document.getElementById('scene-new-btn').addEventListener('click', async () => {
     clearError();
+    const now = new Date();
+    const formatted = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     const res = await api('/api/editor/scenes/create', {
       method: 'POST',
-      body: { name: `Scene ${new Date().toISOString().slice(0, 19)}`, viewport_mode: 'both' },
+      body: { name: `Scene ${formatted}`, viewport_mode: 'both' },
     });
     if (!res.ok) return showError(res.error || 'scene create failed');
     await refreshScenes();
