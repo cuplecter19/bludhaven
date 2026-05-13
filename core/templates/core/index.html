@@ -4,319 +4,107 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BLÜDHAVEN HUB</title>
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Roboto+Condensed:wght@300;400;700&display=swap" rel="stylesheet">
+    <title>BLUDHAVEN</title>
     <link rel="stylesheet" href="{% static 'core/css/index.css' %}">
     {% if is_admin %}
     <link rel="stylesheet" href="{% static 'core/css/admin_panel.css' %}">
     {% endif %}
 </head>
 <body>
+    <div id="scene-root" aria-live="polite"></div>
 
-    <!-- ─────────────────────────────────────────────────────
-         LAYER -2 : Parallax background image
-    ──────────────────────────────────────────────────────── -->
-    <div class="layer layer-parallax-bg"
-         data-parallax-speed="{{ parallax_cfg.speed }}"
-         style="filter: blur({{ parallax_cfg.blur_px }}px);">
-        {% if bg_image %}
-            <img src="{{ bg_image.image.url }}" alt="background" class="bg-img">
-        {% else %}
-            <div class="bg-img bg-img--fallback"></div>
-        {% endif %}
-    </div>
-
-    <!-- ─────────────────────────────────────────────────────
-         LAYER -1 : Background text / watermark
-    ──────────────────────────────────────────────────────── -->
-    <div class="layer layer-bg-text" aria-hidden="true">
-        <span class="bg-text-watermark">
-            BLÜDHAVEN · TOYBOX · MISSION CONTROL · BLÜDHAVEN · TOYBOX · MISSION CONTROL · BLÜDHAVEN · TOYBOX · MISSION CONTROL · BLÜDHAVEN · TOYBOX · MISSION CONTROL · BLÜDHAVEN · TOYBOX · MISSION CONTROL · BLÜDHAVEN · TOYBOX · MISSION CONTROL · BLÜDHAVEN · TOYBOX · MISSION CONTROL · BLÜDHAVEN · TOYBOX
-        </span>
-    </div>
-
-    <!-- ─────────────────────────────────────────────────────
-         LAYER 0 : Main images (magazine hero photos)
-    ──────────────────────────────────────────────────────── -->
-    <div class="layer layer-main-images">
-        {% if main_images %}
-            {% for img in main_images %}
-                <div class="main-img-slot main-img-slot--{{ forloop.counter }}">
-                    <img src="{{ img.image.url }}" alt="{{ img.title }}">
-                </div>
-            {% endfor %}
-        {% else %}
-            <div class="main-img-slot main-img-slot--1 main-img-slot--placeholder"></div>
-            <div class="main-img-slot main-img-slot--2 main-img-slot--placeholder"></div>
-            <div class="main-img-slot main-img-slot--3 main-img-slot--placeholder"></div>
-        {% endif %}
-    </div>
-
-    <!-- ─────────────────────────────────────────────────────
-         LAYER 1 : Stickers
-    ──────────────────────────────────────────────────────── -->
-    <div class="layer layer-stickers">
-        {% for sticker in stickers %}
-        <div class="sticker-item {% if is_admin %}sticker-item--editable{% endif %}"
-             id="sticker-{{ sticker.pk }}"
-             data-pk="{{ sticker.pk }}"
-             style="left:{{ sticker.pos_left }};top:{{ sticker.pos_top }};width:{{ sticker.width }};height:{{ sticker.height }};transform:rotate({{ sticker.rotate }}deg);z-index:{{ sticker.z_index }};">
-            <img src="{{ sticker.image.url }}" alt="{{ sticker.title }}" draggable="false">
-            {% if is_admin %}
-            <div class="sticker-handle" title="드래그하여 이동" aria-label="스티커 이동 핸들">⠿</div>
-            {% endif %}
-        </div>
-        {% endfor %}
-    </div>
-
-    <!-- ─────────────────────────────────────────────────────
-         LAYER 2 : Text blocks (free-positioned)
-    ──────────────────────────────────────────────────────── -->
-    <div class="layer layer-text-blocks">
-        {% for tb in text_blocks %}
-        <div class="text-block-item {% if is_admin %}text-block-item--editable{% endif %}"
-             id="textblock-{{ tb.pk }}"
-             data-pk="{{ tb.pk }}"
-             style="left:{{ tb.pos_left }};top:{{ tb.pos_top }};font-size:{{ tb.font_size }};color:{{ tb.color }};z-index:{{ tb.z_index }};">
-            {{ tb.content }}
-        </div>
-        {% endfor %}
-    </div>
-
-    <!-- ─────────────────────────────────────────────────────
-         LAYER 1 (legacy): Text blocks + clock (fixed layout)
-    ──────────────────────────────────────────────────────── -->
-    <div class="layer layer-text">
-
-        <!-- Text block 1 – issue / headline -->
-        <div class="text-block text-block--1">
-            <p class="text-block__label">VOL. 01 — ISSUE 01</p>
-            <h1 class="text-block__headline">MISSION<br>CONTROL</h1>
-        </div>
-
-        <!-- Text block 2 – subheadline / tagline -->
-        <div class="text-block text-block--2">
-            <p class="text-block__body">Identify yourself<br>to access the Toybox.</p>
-        </div>
-
-        <!-- Text block 3 – user greeting / feature note -->
-        <div class="text-block text-block--3">
-            {% if user.is_authenticated %}
-                <p class="text-block__tag">OPERATOR</p>
-                <p class="text-block__name">{{ user.nickname }}</p>
-                <p class="text-block__pts">🪙 {{ user.points }} PT</p>
-            {% else %}
-                <p class="text-block__tag">CLASSIFIED</p>
-                <p class="text-block__name">ACCESS DENIED</p>
-            {% endif %}
-        </div>
-
-    </div>
-
-    <!-- ─────────────────────────────────────────────────────
-         LAYER 3 : Clock widget
-    ──────────────────────────────────────────────────────── -->
-    {% if clock_cfg.is_active %}
-    <div class="layer layer-clock">
-        <div id="clock-widget"
-             style="left:{{ clock_cfg.pos_left }};top:{{ clock_cfg.pos_top }};font-size:{{ clock_cfg.font_size }};color:{{ clock_cfg.color }};z-index:{{ clock_cfg.z_index }};">
-            <div class="clock__time" id="clock-time">00:00:00</div>
-            <div class="clock__date" id="clock-date">MON 01 JAN 2000</div>
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- ─────────────────────────────────────────────────────
-         LAYER 4 : Menu buttons
-    ──────────────────────────────────────────────────────── -->
-    <div class="layer layer-menu">
-
-        <!-- Auth menu (top-right corner label) -->
-        <div class="menu-auth">
-            {% if user.is_authenticated %}
-                {% if user.profile_image %}
-                    <img src="{{ user.profile_image.url }}" class="profile-circle" alt="profile">
-                {% else %}
-                    <div class="profile-circle profile-circle--empty"></div>
-                {% endif %}
-                <a href="{% url 'accounts:profile_update' %}" class="menu-auth__link">PROFILE</a>
-                <span class="menu-divider">·</span>
-                <a href="{% url 'accounts:logout' %}" class="menu-auth__link menu-auth__link--danger">LOGOUT</a>
-            {% else %}
-                <a href="{% url 'accounts:signup' %}" class="menu-auth__link">JOIN</a>
-                <span class="menu-divider">·</span>
-                <a href="{% url 'accounts:login' %}" class="menu-auth__link">LOGIN</a>
-            {% endif %}
-        </div>
-
-        <!-- Primary navigation – styled as magazine content labels -->
-        <nav class="menu-nav">
-            <a href="{% url 'leitner:dashboard' %}" class="menu-nav__item">
-                <span class="menu-nav__number">01</span>
-                <span class="menu-nav__label">LEITNER BOX</span>
-                <span class="menu-nav__sub">FLASH CARDS &amp; MEMORY</span>
-            </a>
-            <a href="{% url 'scheduler:today' %}" class="menu-nav__item">
-                <span class="menu-nav__number">02</span>
-                <span class="menu-nav__label">SCHEDULER</span>
-                <span class="menu-nav__sub">DAILY MISSION LOG</span>
-            </a>
-            <a href="{% url 'shop:shop' %}" class="menu-nav__item">
-                <span class="menu-nav__number">03</span>
-                <span class="menu-nav__label">POINT SHOP</span>
-                <span class="menu-nav__sub">REDEEM YOUR POINTS</span>
-            </a>
-        </nav>
-
-        <!-- Masthead strip -->
-        <div class="masthead">
-            <span class="masthead__title">BLÜDHAVEN</span>
-            <span class="masthead__sub">TOYBOX HUB</span>
-        </div>
-
-    </div>
-
-    <!-- ─────────────────────────────────────────────────────
-         LAYER 5 : Admin panel (superuser only)
-    ──────────────────────────────────────────────────────── -->
     {% if is_admin %}
-    <div id="admin-panel" class="layer-admin-panel">
-        <div id="admin-panel-handle">⠿ ADMIN PANEL</div>
-        <div id="admin-panel-error"></div>
+    <aside id="editor-panel" class="editor-panel" hidden>
+        <div id="editor-panel-handle" class="editor-panel__handle">EDITOR</div>
 
-        <!-- 패럴랙스 설정 -->
-        <div class="admin-section">
-            <div class="admin-section__title">Parallax</div>
-            <div class="admin-field">
-                <label>Speed</label>
-                <input type="range" id="parallax-speed-input" min="0" max="1" step="0.05" value="{{ parallax_cfg.speed }}">
-            </div>
-            <div class="admin-field">
-                <label>Overlay</label>
-                <input type="range" id="parallax-overlay-input" min="0" max="0.8" step="0.05" value="{{ parallax_cfg.overlay_opacity }}">
-            </div>
-            <button class="admin-btn" id="parallax-save-btn">저장</button>
+        <div class="editor-panel__section">
+            <label>Scene</label>
+            <select id="scene-select"></select>
+            <button id="scene-new-btn" type="button">새 씬</button>
+            <button id="scene-activate-btn" type="button">활성화</button>
         </div>
 
-        <!-- 시계 설정 -->
-        <div class="admin-section">
-            <div class="admin-section__title">Clock Widget</div>
-            <div class="admin-field">
-                <label>Left</label>
-                <input type="text" id="clock-pos-left-input" value="{{ clock_cfg.pos_left }}">
-            </div>
-            <div class="admin-field">
-                <label>Top</label>
-                <input type="text" id="clock-pos-top-input" value="{{ clock_cfg.pos_top }}">
-            </div>
-            <div class="admin-field">
-                <label>Font Size</label>
-                <input type="text" id="clock-font-size-input" value="{{ clock_cfg.font_size }}">
-            </div>
-            <div class="admin-field">
-                <label>Color</label>
-                <input type="color" id="clock-color-input" value="{{ clock_cfg.color }}">
-            </div>
-            <div class="admin-field">
-                <label>Z-Index</label>
-                <input type="number" id="clock-z-index-input" value="{{ clock_cfg.z_index }}">
-            </div>
-            <div class="admin-field">
-                <label>Active</label>
-                <input type="checkbox" id="clock-is-active-input" {% if clock_cfg.is_active %}checked{% endif %}>
-            </div>
-            <button class="admin-btn" id="clock-save-btn">저장</button>
+        <div class="editor-panel__section">
+            <label>Viewport</label>
+            <select id="viewport-mode-select">
+                <option value="both">Both</option>
+                <option value="desktop">Desktop</option>
+                <option value="mobile">Mobile</option>
+            </select>
+            <button id="save-draft-btn" type="button">저장</button>
+            <button id="revision-save-btn" type="button">리비전 저장</button>
         </div>
 
-        <!-- 텍스트블록 -->
-        <div class="admin-section">
-            <div class="admin-section__title">Text Blocks</div>
-            {% for tb in text_blocks %}
-            <div class="tb-row" data-tb-pk="{{ tb.pk }}">
-                <div class="admin-section__title" style="font-size:0.6rem;">{{ tb.get_position_display }}</div>
-                <div class="admin-field">
-                    <label>Content</label>
-                    <textarea data-field="content" rows="2">{{ tb.content }}</textarea>
-                </div>
-                <div class="admin-field">
-                    <label>Left</label>
-                    <input type="text" data-field="pos_left" value="{{ tb.pos_left }}">
-                </div>
-                <div class="admin-field">
-                    <label>Top</label>
-                    <input type="text" data-field="pos_top" value="{{ tb.pos_top }}">
-                </div>
-                <div class="admin-field">
-                    <label>Font Size</label>
-                    <input type="text" data-field="font_size" value="{{ tb.font_size }}">
-                </div>
-                <div class="admin-field">
-                    <label>Color</label>
-                    <input type="color" data-field="color" value="{{ tb.color }}">
-                </div>
-                <div class="admin-field">
-                    <label>Z-Index</label>
-                    <input type="number" data-field="z_index" value="{{ tb.z_index }}">
-                </div>
-                <button class="admin-btn tb-save-btn">저장</button>
+        <div class="editor-panel__section editor-panel__section--toolbar">
+            <button id="undo-btn" type="button">Undo</button>
+            <button id="redo-btn" type="button">Redo</button>
+            <button id="sticker-mode-btn" type="button">스티커 편집</button>
+            <span id="dirty-indicator" class="dirty-indicator">Saved</span>
+        </div>
+
+        <div class="editor-panel__section">
+            <label>레이어 추가</label>
+            <select id="new-layer-type">
+                <option value="bg_image">bg_image</option>
+                <option value="parallax_far">parallax_far</option>
+                <option value="bg_text">bg_text</option>
+                <option value="main_image">main_image</option>
+                <option value="text">text</option>
+                <option value="clock">clock</option>
+                <option value="menu_button">menu_button</option>
+                <option value="sticker">sticker</option>
+                <option value="parallax_near">parallax_near</option>
+                <option value="parallax_ultra_near">parallax_ultra_near</option>
+            </select>
+            <button id="add-layer-btn" type="button">추가</button>
+        </div>
+
+        <div class="editor-panel__section">
+            <label>에셋 업로드</label>
+            <input type="file" id="asset-file-input" accept="image/*">
+            <select id="asset-kind-select">
+                <option value="background">background</option>
+                <option value="main">main</option>
+                <option value="parallax">parallax</option>
+                <option value="sticker">sticker</option>
+                <option value="generic">generic</option>
+            </select>
+            <button id="asset-upload-btn" type="button">업로드</button>
+        </div>
+
+        <div class="editor-panel__section">
+            <label>레이어 목록</label>
+            <ul id="layer-list" class="layer-list"></ul>
+        </div>
+
+        <div class="editor-panel__section">
+            <label>선택 레이어 속성</label>
+            <div class="grid-form">
+                <label>X</label><input id="prop-x" type="number" step="0.1">
+                <label>Y</label><input id="prop-y" type="number" step="0.1">
+                <label>W</label><input id="prop-width" type="number" step="0.1" min="0">
+                <label>H</label><input id="prop-height" type="number" step="0.1" min="0">
+                <label>Rotate</label><input id="prop-rotation" type="number" step="0.1">
+                <label>Scale</label><input id="prop-scale" type="number" step="0.01" min="0.01">
+                <label>Opacity</label><input id="prop-opacity" type="number" step="0.01" min="0" max="1">
+                <label>Z</label><input id="prop-z" type="number" step="1" min="0">
+                <label>Text</label><input id="prop-text" type="text">
+                <label>URL</label><input id="prop-url" type="text">
+                <label>Asset URL</label><input id="prop-asset" type="text">
             </div>
-            {% endfor %}
+            <button id="prop-apply-btn" type="button">적용</button>
+            <button id="layer-delete-btn" type="button" class="danger">삭제</button>
         </div>
 
-        <!-- 스티커 추가 -->
-        <div class="admin-section">
-            <div class="admin-section__title">Add Sticker</div>
-            <form id="sticker-add-form" enctype="multipart/form-data">
-                {% csrf_token %}
-                <div class="admin-field">
-                    <label>Image</label>
-                    <input type="file" name="image" accept="image/*" required>
-                </div>
-                <div class="admin-field">
-                    <label>Title</label>
-                    <input type="text" name="title" placeholder="optional">
-                </div>
-                <div class="admin-field">
-                    <label>Left</label>
-                    <input type="text" name="pos_left" value="50%">
-                </div>
-                <div class="admin-field">
-                    <label>Top</label>
-                    <input type="text" name="pos_top" value="50%">
-                </div>
-                <div class="admin-field">
-                    <label>Width</label>
-                    <input type="text" name="width" value="160px">
-                </div>
-                <div class="admin-field">
-                    <label>Z-Index</label>
-                    <input type="number" name="z_index" value="10">
-                </div>
-                <button type="submit" class="admin-btn">추가</button>
-            </form>
-        </div>
-
-        <!-- 스티커 목록 (삭제) -->
-        {% if stickers %}
-        <div class="admin-section">
-            <div class="admin-section__title">Stickers</div>
-            {% for sticker in stickers %}
-            <div class="sticker-list-item">
-                <img src="{{ sticker.image.url }}" alt="{{ sticker.title }}">
-                <span>{{ sticker.title|default:sticker.pk }}</span>
-                <button class="admin-btn admin-btn--danger sticker-delete-btn" data-pk="{{ sticker.pk }}">삭제</button>
-            </div>
-            {% endfor %}
-        </div>
-        {% endif %}
-
-    </div>
+        <div id="editor-error" class="editor-error" hidden></div>
+    </aside>
     {% endif %}
 
-    <script src="{% static 'core/js/index.js' %}"></script>
-    {% if is_admin %}
-    <script src="{% static 'core/js/admin_panel.js' %}"></script>
-    {% endif %}
-
+    <script>
+      window.__CORE_MAINPAGE__ = {
+        isAdmin: {{ is_admin|yesno:"true,false" }}
+      };
+    </script>
+    <script type="module" src="{% static 'core/js/index.js' %}"></script>
 </body>
 </html>
