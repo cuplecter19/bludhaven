@@ -26,7 +26,8 @@ export function createStateStore() {
   }
 
   function emit() {
-    for (const cb of listeners) cb(getState());
+    const snapshot = cloneCurrent();
+    for (const cb of listeners) cb(snapshot);
   }
 
   function pushUndo() {

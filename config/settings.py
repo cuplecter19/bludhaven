@@ -85,16 +85,6 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-<<<<<<< HEAD
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'toybox_db',
-        'USER': 'admin',
-        'PASSWORD': 'password123',
-        'HOST': 'db', # Docker compose를 쓴다면 서비스 이름
-        'PORT': '5432',
-=======
 _DB_ENGINE = os.environ.get('DB_ENGINE', 'django.db.backends.sqlite3')
 if _DB_ENGINE == 'django.db.backends.sqlite3':
     DATABASES = {
@@ -113,7 +103,6 @@ else:
             'HOST': os.environ.get('DB_HOST', 'db'),
             'PORT': os.environ.get('DB_PORT', '5432'),
         }
->>>>>>> 10945b8b8d6f8710cd8cf07aafa6465409e41ff0
     }
 
 
