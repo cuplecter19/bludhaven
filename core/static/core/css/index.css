@@ -1,497 +1,114 @@
-/* ================================================================
-   BLÜDHAVEN TOYBOX — Index page
-   Magazine-cover layered layout
-   z-index map:
-     -2  .layer-bg-image
-     -1  .layer-bg-text
-      0  .layer-main-images
-      1  .layer-text
-      2  .layer-menu
-================================================================ */
-
-/* ── Variables ─────────────────────────────────────────────── */
 :root {
-    --nw-blue:       #0084ff;
-    --nw-blue-dim:   rgba(0, 132, 255, 0.18);
-    --nw-red:        #e8001a;
-    --nw-black:      #050505;
-    --nw-dark-blue:  #001a33;
-    --nw-off-white:  #f0ece3;
-    --nw-grey:       #8a8a8a;
-
-    --font-display:  'Bebas Neue', 'Impact', sans-serif;
-    --font-serif:    'Playfair Display', Georgia, serif;
-    --font-condensed:'Roboto Condensed', 'Arial Narrow', sans-serif;
-
-    --parallax-speed:   0.4;
-    --overlay-opacity:  0.3;
+  --bg: #090b10;
+  --text: #e8ecf2;
+  --accent: #4da3ff;
+  --danger: #ff5f6d;
 }
 
-/* ── Reset ──────────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box; }
+html, body { width: 100%; height: 100%; margin: 0; padding: 0; background: var(--bg); color: var(--text); overflow: hidden; font-family: Inter, system-ui, -apple-system, sans-serif; }
 
-html, body {
-    width: 100%; height: 100%;
-    overflow: hidden;
+#scene-root {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #080a0f;
 }
 
-body {
-    background-color: var(--nw-black);
-    font-family: var(--font-condensed);
-    color: var(--nw-off-white);
+.scene-layer {
+  position: absolute;
+  transform-origin: center center;
 }
 
-/* ── Layer base ─────────────────────────────────────────────── */
-.layer {
-    position: fixed;
-    inset: 0;
-    width: 100vw;
-    height: 100vh;
-    pointer-events: none;       /* re-enable per child where needed */
+.scene-layer[data-layer-type='bg_image'] img,
+.scene-layer[data-layer-type='main_image'] img,
+.scene-layer[data-layer-type='sticker'] img,
+.scene-layer[data-layer-type='parallax_far'] img,
+.scene-layer[data-layer-type='parallax_near'] img,
+.scene-layer[data-layer-type='parallax_ultra_near'] img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  user-select: none;
+  pointer-events: none;
 }
 
-/* ================================================================
-   LAYER -2 : Background image
-================================================================ */
-.layer-bg-image { z-index: -2; }
-
-.bg-img {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center;
-    filter: brightness(0.35) saturate(0.6);
+.scene-layer--text {
+  white-space: pre-wrap;
+  color: #f3f7ff;
+  line-height: 1.2;
+  pointer-events: auto;
 }
 
-.bg-img--fallback {
-    background:
-        radial-gradient(ellipse 80% 60% at 50% 40%, #002244 0%, var(--nw-black) 100%);
+.scene-layer--menu-button a {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 12px;
+  color: #fff;
+  text-decoration: none;
+  background: rgba(5, 10, 20, 0.6);
+  border: 1px solid rgba(120, 180, 255, 0.5);
+  border-radius: 6px;
 }
 
-/* ================================================================
-   LAYER -1 : Background watermark text
-================================================================ */
-.layer-bg-text { z-index: -1; overflow: hidden; }
-
-.bg-text-watermark {
-    display: block;
-    position: absolute;
-    inset: -20px;
-    font-family: var(--font-display);
-    font-size: clamp(3rem, 7vw, 6rem);
-    line-height: 1.1;
-    letter-spacing: .06em;
-    color: rgba(0, 132, 255, 0.06);
-    word-break: break-all;
-    white-space: pre-wrap;
-    user-select: none;
+.scene-layer--clock {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.04em;
+  pointer-events: auto;
 }
 
-/* ================================================================
-   LAYER 0 : Main images
-================================================================ */
-.layer-main-images { z-index: 0; }
-
-/* Three-slot grid: large left + two stacked right */
-.main-img-slot {
-    position: absolute;
-    overflow: hidden;
+.scene-layer--selected {
+  outline: 1px dashed rgba(96, 170, 255, 0.8);
+  outline-offset: 2px;
 }
 
-.main-img-slot img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: top center;
-    display: block;
+.sticker-hover-controls {
+  position: absolute;
+  inset: -14px -14px auto auto;
+  display: none;
+  gap: 4px;
+  pointer-events: auto;
 }
 
-/* Slot 1 — large left hero */
-.main-img-slot--1 {
-    left: 20%;
-    top: 0;
-    width: 38%;
-    height: 100%;
-    box-shadow: 0 0 60px rgba(0,0,0,0.8);
+.scene-layer--sticker-edit:hover .sticker-hover-controls {
+  display: inline-flex;
 }
 
-/* Slot 2 — upper right */
-.main-img-slot--2 {
-    left: 59%;
-    top: 0;
-    width: 22%;
-    height: 55%;
-    box-shadow: 0 0 40px rgba(0,0,0,0.6);
+.sticker-hover-controls button,
+.sticker-hover-controls .badge {
+  border: 1px solid rgba(120, 170, 255, 0.8);
+  background: rgba(4, 12, 24, 0.9);
+  color: #dce7ff;
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 1;
+  padding: 4px 6px;
 }
 
-/* Slot 3 — lower right */
-.main-img-slot--3 {
-    left: 59%;
-    top: 56%;
-    width: 22%;
-    height: 44%;
-    box-shadow: 0 0 40px rgba(0,0,0,0.6);
+.sticker-resize-handle,
+.sticker-rotate-handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid #1b8bff;
+  pointer-events: auto;
 }
 
-.main-img-slot--placeholder {
-    background: #111;
-    border: 1px solid #222;
-}
-.main-img-slot--placeholder::after {
-    content: '';
-    display: block;
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, #0a0a0a 25%, #141414 50%, #0a0a0a 75%);
-}
+.sticker-resize-handle { right: -6px; bottom: -6px; cursor: nwse-resize; }
+.sticker-rotate-handle { left: calc(50% - 6px); top: -18px; cursor: grab; }
 
-/* ================================================================
-   LAYER 1 : Text blocks + clock
-================================================================ */
-.layer-text { z-index: 1; }
-
-/* ── Text block base ── */
-.text-block {
-    position: absolute;
-}
-
-/* Block 1 — headline (far left column) */
-.text-block--1 {
-    left: 2%;
-    top: 12%;
-    width: 17%;
-}
-
-.text-block__label {
-    font-family: var(--font-condensed);
-    font-size: clamp(.55rem, .9vw, .85rem);
-    font-weight: 700;
-    letter-spacing: .2em;
-    color: var(--nw-blue);
-    text-transform: uppercase;
-    margin-bottom: .4rem;
-    border-top: 2px solid var(--nw-blue);
-    padding-top: .35rem;
-}
-
-.text-block__headline {
-    font-family: var(--font-display);
-    font-size: clamp(2.5rem, 5.5vw, 5.5rem);
-    line-height: .95;
-    letter-spacing: .02em;
-    color: var(--nw-off-white);
-    text-transform: uppercase;
-}
-
-/* Block 2 — tagline / subheadline (below block 1) */
-.text-block--2 {
-    left: 2%;
-    top: 52%;
-    width: 17%;
-    border-left: 3px solid var(--nw-red);
-    padding-left: .75rem;
-}
-
-.text-block__body {
-    font-family: var(--font-serif);
-    font-style: italic;
-    font-size: clamp(.75rem, 1.1vw, 1.05rem);
-    line-height: 1.5;
-    color: var(--nw-off-white);
-}
-
-/* Block 3 — operator / access card */
-.text-block--3 {
-    left: 2%;
-    top: 72%;
-    width: 17%;
-}
-
-.text-block__tag {
-    font-family: var(--font-condensed);
-    font-size: clamp(.5rem, .75vw, .7rem);
-    font-weight: 700;
-    letter-spacing: .25em;
-    color: var(--nw-red);
-    background: rgba(232, 0, 26, .12);
-    display: inline-block;
-    padding: .15rem .5rem;
-    margin-bottom: .4rem;
-}
-
-.text-block__name {
-    font-family: var(--font-display);
-    font-size: clamp(1.4rem, 2.8vw, 2.6rem);
-    line-height: 1;
-    letter-spacing: .04em;
-}
-
-.text-block__pts {
-    font-size: clamp(.6rem, .85vw, .8rem);
-    letter-spacing: .1em;
-    color: var(--nw-grey);
-    margin-top: .3rem;
-}
-
-/* Clock widget */
-.text-block--clock {
-    left: 2%;
-    bottom: 3%;
-    width: 17%;
-    border-top: 1px solid rgba(255,255,255,.15);
-    padding-top: .6rem;
-}
-
-.clock__time {
-    font-family: var(--font-display);
-    font-size: clamp(1.6rem, 3.2vw, 3rem);
-    letter-spacing: .08em;
-    color: var(--nw-blue);
-    line-height: 1;
-}
-
-.clock__date {
-    font-family: var(--font-condensed);
-    font-size: clamp(.55rem, .8vw, .75rem);
-    letter-spacing: .22em;
-    color: var(--nw-grey);
-    margin-top: .25rem;
-    text-transform: uppercase;
-}
-
-/* ================================================================
-   LAYER 2 : Menu / navigation
-================================================================ */
-.layer-menu { z-index: 2; pointer-events: none; }
-
-/* ── Masthead strip across top ── */
-.masthead {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 56px;
-    background: rgba(5,5,5,.82);
-    border-bottom: 2px solid var(--nw-blue);
-    display: flex;
-    align-items: center;
-    padding: 0 2.5%;
-    gap: 1rem;
-    pointer-events: auto;
-    box-shadow: 0 2px 24px rgba(0,132,255,.25);
-}
-
-.masthead__title {
-    font-family: var(--font-display);
-    font-size: 2rem;
-    letter-spacing: .12em;
-    color: var(--nw-off-white);
-    line-height: 1;
-}
-
-.masthead__sub {
-    font-family: var(--font-condensed);
-    font-size: .7rem;
-    letter-spacing: .3em;
-    color: var(--nw-blue);
-    text-transform: uppercase;
-    margin-top: .15rem;
-    align-self: flex-end;
-    padding-bottom: .35rem;
-}
-
-/* ── Auth links (top-right) ── */
-.menu-auth {
-    position: absolute;
-    top: 0;
-    right: 2.5%;
-    height: 56px;
-    display: flex;
-    align-items: center;
-    gap: .75rem;
-    pointer-events: auto;
-}
-
-.profile-circle {
-    width: 34px; height: 34px;
-    border-radius: 50%;
-    border: 2px solid var(--nw-blue);
-    object-fit: cover;
-    vertical-align: middle;
-    display: inline-block;
-}
-
-.profile-circle--empty {
-    background: #222;
-}
-
-.menu-auth__link {
-    font-family: var(--font-condensed);
-    font-size: .75rem;
-    font-weight: 700;
-    letter-spacing: .18em;
-    color: var(--nw-off-white);
-    text-decoration: none;
-    text-transform: uppercase;
-    transition: color .2s;
-}
-
-.menu-auth__link:hover { color: var(--nw-blue); }
-.menu-auth__link--danger { color: var(--nw-red); }
-.menu-auth__link--danger:hover { color: #ff3355; }
-
-.menu-divider {
-    color: var(--nw-grey);
-    font-size: .8rem;
-}
-
-/* ── Primary nav — magazine content labels (right column) ── */
-.menu-nav {
-    position: absolute;
-    right: 2%;
-    top: 72px;
-    width: 20%;
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-    pointer-events: auto;
-}
-
-.menu-nav__item {
-    display: flex;
-    flex-direction: column;
-    padding: .9rem 1rem;
-    text-decoration: none;
-    color: var(--nw-off-white);
-    border-bottom: 1px solid rgba(255,255,255,.08);
-    transition: background .2s, border-color .2s;
-    background: rgba(5,5,5,.5);
-}
-
-.menu-nav__item:first-child {
-    border-top: 2px solid var(--nw-blue);
-}
-
-.menu-nav__item:hover {
-    background: rgba(0,132,255,.12);
-    border-bottom-color: var(--nw-blue);
-}
-
-.menu-nav__number {
-    font-family: var(--font-display);
-    font-size: .85rem;
-    letter-spacing: .15em;
-    color: var(--nw-blue);
-    line-height: 1;
-    margin-bottom: .2rem;
-}
-
-.menu-nav__label {
-    font-family: var(--font-display);
-    font-size: clamp(1.1rem, 1.8vw, 1.6rem);
-    letter-spacing: .06em;
-    line-height: 1;
-}
-
-.menu-nav__sub {
-    font-family: var(--font-condensed);
-    font-size: clamp(.5rem, .65vw, .62rem);
-    letter-spacing: .2em;
-    color: var(--nw-grey);
-    text-transform: uppercase;
-    margin-top: .3rem;
-}
-
-/* ── Vertical rule between images and nav ── */
-.layer-menu::before {
-    content: '';
-    position: absolute;
-    right: calc(2% + 20%);
-    top: 56px;
-    bottom: 0;
-    width: 1px;
-    background: linear-gradient(to bottom, var(--nw-blue) 0%, transparent 100%);
-    opacity: .3;
-}
-
-/* ================================================================
-   LAYER -2 (PARALLAX) : Parallax background
-================================================================ */
-.layer-parallax-bg {
-    z-index: -2;
-    position: fixed;
-    inset: -30% 0;
-    will-change: transform;
-}
-
-.layer-parallax-bg .bg-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center;
-    filter: brightness(0.35) saturate(0.6);
-}
-
-.layer-parallax-bg::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, var(--overlay-opacity, 0.3));
-    pointer-events: none;
-}
-
-/* ================================================================
-   LAYER 1 : Stickers
-================================================================ */
-.layer-stickers {
-    z-index: 1;
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-}
-
-.sticker-item {
-    position: absolute;
-    pointer-events: auto;
-}
-
-.sticker-item img {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    pointer-events: none;
-    user-select: none;
-}
-
-/* ================================================================
-   LAYER 2 : Text blocks (free-positioned)
-================================================================ */
-.layer-text-blocks {
-    z-index: 2;
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-}
-
-.text-block-item {
-    position: absolute;
-    pointer-events: auto;
-    user-select: none;
-}
-
-/* ================================================================
-   LAYER 3 : Clock widget (free-positioned)
-================================================================ */
-.layer-clock {
-    z-index: 3;
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-}
-
-#clock-widget {
-    position: absolute;
-    pointer-events: auto;
+.fallback-empty {
+  position: absolute;
+  left: 32px;
+  top: 32px;
+  max-width: 480px;
+  background: rgba(7, 14, 25, 0.85);
+  border: 1px solid rgba(120, 160, 255, 0.4);
+  padding: 14px 16px;
+  border-radius: 8px;
 }

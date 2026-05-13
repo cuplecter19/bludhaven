@@ -1,221 +1,436 @@
-from django.shortcuts import render, get_object_or_404
+import hashlib
+import io
+import os
+import tempfile
+import uuid
+
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
+from django.db import transaction
+from django.http import Http404
+from django.shortcuts import get_object_or_404, render
+from django.utils import timezone
+from PIL import Image, ImageOps, UnidentifiedImageError
+from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
-from rest_framework import status
 
-from .models import IndexImage, TextBlock, ParallaxConfig, ClockWidgetConfig
+from .models import EditorRevision, MediaAsset, PageScene, SceneLayer
+
+
+TIER_BASE_MAP = {
+    -3: -30000,
+    -2: -20000,
+    -1: -10000,
+    0: 0,
+    1: 10000,
+    2: 20000,
+    3: 30000,
+    4: 40000,
+}
 
 
 def index(request):
-    bg_image = IndexImage.objects.filter(
-        layer=IndexImage.LAYER_BACKGROUND, is_active=True
-    ).first()
-    main_images = IndexImage.objects.filter(
-        layer=IndexImage.LAYER_MAIN, is_active=True
-    )
-    stickers = IndexImage.objects.filter(
-        layer=IndexImage.LAYER_STICKER, is_active=True
-    ).order_by('z_index')
-    text_blocks = TextBlock.objects.filter(is_active=True)
-
-    parallax_cfg = ParallaxConfig.objects.first() or ParallaxConfig()
-    clock_cfg    = ClockWidgetConfig.objects.first() or ClockWidgetConfig()
-
-    context = {
-        'bg_image':     bg_image,
-        'main_images':  main_images,
-        'stickers':     stickers,
-        'text_blocks':  text_blocks,
-        'parallax_cfg': parallax_cfg,
-        'clock_cfg':    clock_cfg,
-        'is_admin':     request.user.is_superuser,
-    }
-    return render(request, 'core/index.html', context)
+    return render(request, 'core/index.html', {'is_admin': request.user.is_staff})
 
 
-# ── Sticker APIs ─────────────────────────────────────────────────────────────
-
-@api_view(['POST', 'PATCH'])
-@permission_classes([IsAdminUser])
-def sticker_move(request, pk):
-    sticker = get_object_or_404(IndexImage, pk=pk, layer=IndexImage.LAYER_STICKER)
-    pos_left = request.data.get('pos_left')
-    pos_top  = request.data.get('pos_top')
-    if pos_left is not None:
-        sticker.pos_left = pos_left
-    if pos_top is not None:
-        sticker.pos_top = pos_top
-    sticker.save(update_fields=['pos_left', 'pos_top'])
-    return Response({'ok': True, 'data': {'pos_left': sticker.pos_left, 'pos_top': sticker.pos_top}})
-
-
-@api_view(['GET', 'POST', 'PATCH'])
-@permission_classes([IsAdminUser])
-def sticker_update(request, pk):
-    sticker = get_object_or_404(IndexImage, pk=pk, layer=IndexImage.LAYER_STICKER)
-    if request.method == 'GET':
-        return Response({'ok': True, 'data': _sticker_data(sticker)})
-    fields = ['pos_left', 'pos_top', 'width', 'height', 'rotate', 'z_index', 'title', 'is_active']
-    updated = []
-    for f in fields:
-        if f in request.data:
-            setattr(sticker, f, request.data[f])
-            updated.append(f)
-    if updated:
-        sticker.save(update_fields=updated)
-    return Response({'ok': True, 'data': _sticker_data(sticker)})
-
-
-@api_view(['DELETE'])
-@permission_classes([IsAdminUser])
-def sticker_delete(request, pk):
-    sticker = get_object_or_404(IndexImage, pk=pk, layer=IndexImage.LAYER_STICKER)
-    sticker.delete()
-    return Response({'ok': True})
+@api_view(['GET'])
+def active_scene(request):
+    scene = PageScene.objects.filter(is_active=True).prefetch_related('layers').first()
+    if scene is None:
+        return Response({'ok': True, 'data': fallback_scene()}, status=status.HTTP_200_OK)
+    return Response({'ok': True, 'data': serialize_scene(scene)}, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
-def sticker_add(request):
-    image_file = request.FILES.get('image')
-    if not image_file:
-        return Response({'ok': False, 'error': 'image file required'}, status=status.HTTP_400_BAD_REQUEST)
-    sticker = IndexImage(
-        title=request.data.get('title', ''),
-        layer=IndexImage.LAYER_STICKER,
-        pos_left=request.data.get('pos_left', '50%'),
-        pos_top=request.data.get('pos_top', '50%'),
-        width=request.data.get('width', '160px'),
-        height=request.data.get('height', 'auto'),
-        rotate=int(request.data.get('rotate', 0)),
-        z_index=int(request.data.get('z_index', 10)),
+def create_layer(request):
+    scene_id = request.data.get('scene_id')
+    layer_type = request.data.get('layer_type')
+    if not scene_id or not layer_type:
+        return bad_request('INVALID_REQUEST', 'scene_id and layer_type are required')
+
+    scene = get_object_or_404(PageScene, pk=scene_id)
+    try:
+        layer = SceneLayer(
+            scene=scene,
+            layer_type=layer_type,
+            z_index=int(request.data.get('z_index', 0)),
+            enabled=bool(request.data.get('enabled', True)),
+            x=float(request.data.get('x', 0)),
+            y=float(request.data.get('y', 0)),
+            width=float(request.data.get('width', 200)),
+            height=float(request.data.get('height', 200)),
+            rotation_deg=float(request.data.get('rotation_deg', 0)),
+            scale=float(request.data.get('scale', 1)),
+            opacity=float(request.data.get('opacity', 1)),
+            settings_json=request.data.get('settings_json') or {},
+        )
+        layer.save()
+    except Exception as exc:
+        return bad_request('VALIDATION_FAILED', str(exc))
+
+    return Response({'ok': True, 'data': serialize_layer(layer)}, status=status.HTTP_201_CREATED)
+
+
+@api_view(['PATCH'])
+@permission_classes([IsAdminUser])
+def patch_layer(request, layer_id):
+    layer = get_object_or_404(SceneLayer, pk=layer_id)
+    if 'layer_tier' in request.data:
+        requested = int(request.data.get('layer_tier'))
+        expected = SceneLayer.TYPE_TIER_MAP[layer.layer_type]
+        if requested != expected:
+            return bad_request('INVALID_TIER', f'layer_tier for {layer.layer_type} must be {expected}')
+
+    if layer.layer_type == SceneLayer.TYPE_STICKER and 'layer_tier' in request.data:
+        return bad_request('INVALID_TIER', 'sticker layer_tier is fixed to 2')
+
+    mutable_fields = [
+        'layer_type', 'z_index', 'enabled', 'x', 'y', 'width', 'height', 'rotation_deg', 'scale', 'opacity', 'settings_json'
+    ]
+    try:
+        for field in mutable_fields:
+            if field not in request.data:
+                continue
+            value = request.data[field]
+            if field in ('z_index',):
+                value = int(value)
+            elif field in ('x', 'y', 'width', 'height', 'rotation_deg', 'scale', 'opacity'):
+                value = float(value)
+            setattr(layer, field, value)
+        layer.save()
+    except Exception as exc:
+        return bad_request('VALIDATION_FAILED', str(exc))
+
+    return Response({'ok': True, 'data': serialize_layer(layer)})
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAdminUser])
+def delete_layer(request, layer_id):
+    layer = get_object_or_404(SceneLayer, pk=layer_id)
+    layer.delete()
+    return Response({'ok': True}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def reorder_layers(request):
+    orders = request.data.get('orders')
+    if not isinstance(orders, list):
+        return bad_request('INVALID_REQUEST', 'orders must be a list')
+
+    updated_ids = []
+    try:
+        with transaction.atomic():
+            for item in orders:
+                layer = SceneLayer.objects.select_for_update().get(pk=int(item['id']))
+                layer.z_index = int(item['z_index'])
+                layer.save(update_fields=['z_index', 'updated_at'])
+                updated_ids.append(layer.id)
+    except SceneLayer.DoesNotExist:
+        raise Http404
+    except Exception as exc:
+        return bad_request('VALIDATION_FAILED', str(exc))
+
+    layers = list(SceneLayer.objects.filter(id__in=updated_ids))
+    return Response({'ok': True, 'data': [serialize_layer(l) for l in layers]})
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def upload_asset(request):
+    file = request.FILES.get('file')
+    kind = request.data.get('kind', 'generic')
+    if not file:
+        return bad_request('INVALID_REQUEST', 'file is required')
+
+    try:
+        validate_upload(file)
+    except ValueError as exc:
+        return bad_request('FILE_TOO_LARGE', str(exc))
+
+    original_tmp_path = None
+    variants_payload = {}
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix='-upload') as tmp:
+            for chunk in file.chunks():
+                tmp.write(chunk)
+            original_tmp_path = tmp.name
+
+        with open(original_tmp_path, 'rb') as f:
+            original_bytes = f.read()
+
+        image = Image.open(io.BytesIO(original_bytes))
+        image = ImageOps.exif_transpose(image)
+        if image.mode not in ('RGB', 'RGBA'):
+            image = image.convert('RGBA')
+
+        hash_sha = hashlib.sha256(original_bytes).hexdigest()
+        variants = generate_variants(image)
+
+        base_key = f"core/assets/{timezone.now().strftime('%Y/%m/%d')}/{uuid.uuid4().hex}"
+        saved_paths = {}
+        for name, variant in variants.items():
+            webp_bytes = transcode_to_webp(variant, quality=82)
+            webp_path = default_storage.save(f'{base_key}_{name}.webp', ContentFile(webp_bytes))
+            saved_paths[f'{name}_webp'] = webp_path
+            try:
+                avif_bytes = transcode_to_avif(variant, quality=48)
+                avif_path = default_storage.save(f'{base_key}_{name}.avif', ContentFile(avif_bytes))
+                saved_paths[f'{name}_avif'] = avif_path
+            except Exception:
+                pass
+
+        media = MediaAsset.objects.create(
+            kind=kind,
+            mime_type=file.content_type or 'application/octet-stream',
+            storage_path=saved_paths.get('full_webp') or next(iter(saved_paths.values())),
+            width=image.width,
+            height=image.height,
+            bytes=len(original_bytes),
+            hash_sha256=hash_sha,
+            original_deleted_at=timezone.now(),
+        )
+        variants_payload = {
+            k: default_storage.url(v) for k, v in saved_paths.items()
+        }
+    except UnidentifiedImageError:
+        return bad_request('UNSUPPORTED_FORMAT', 'Unsupported image format')
+    except OSError:
+        return bad_request('TRANSCODE_FAILED', 'Image transcode failed')
+    except Exception as exc:
+        return bad_request('UPLOAD_FAILED', str(exc))
+    finally:
+        if original_tmp_path:
+            purge_original(original_tmp_path)
+
+    return Response(
+        {'ok': True, 'data': {'asset': serialize_asset(media), 'variants': variants_payload}},
+        status=status.HTTP_201_CREATED,
     )
-    sticker.image = image_file
-    sticker.save()
-    return Response({'ok': True, 'data': _sticker_data(sticker)}, status=status.HTTP_201_CREATED)
 
 
-# ── TextBlock API ─────────────────────────────────────────────────────────────
-
-@api_view(['GET', 'POST', 'PATCH'])
+@api_view(['POST'])
 @permission_classes([IsAdminUser])
-def textblock_update(request, pk):
-    tb = get_object_or_404(TextBlock, pk=pk)
-    if request.method == 'GET':
-        return Response({'ok': True, 'data': _textblock_data(tb)})
-    fields = ['content', 'pos_left', 'pos_top', 'font_size', 'color', 'z_index', 'is_active']
-    updated = []
-    for f in fields:
-        if f in request.data:
-            setattr(tb, f, request.data[f])
-            updated.append(f)
-    if updated:
-        tb.save(update_fields=updated)
-    return Response({'ok': True, 'data': _textblock_data(tb)})
+def create_revision(request):
+    scene_id = request.data.get('scene_id')
+    if not scene_id:
+        return bad_request('INVALID_REQUEST', 'scene_id is required')
+    scene = get_object_or_404(PageScene, pk=scene_id)
+
+    snapshot = request.data.get('snapshot_json')
+    if not snapshot:
+        snapshot = serialize_scene(scene)
+
+    revision = EditorRevision.objects.create(scene=scene, snapshot_json=snapshot, author=request.user)
+    return Response({'ok': True, 'data': {'id': revision.id, 'created_at': revision.created_at.isoformat()}})
 
 
-# ── Clock Widget API ──────────────────────────────────────────────────────────
-
-@api_view(['GET', 'POST', 'PATCH'])
+@api_view(['POST'])
 @permission_classes([IsAdminUser])
-def clock_update(request):
-    cfg = ClockWidgetConfig.objects.first()
-    if cfg is None:
-        cfg = ClockWidgetConfig()
-    if request.method == 'GET':
-        return Response({'ok': True, 'data': _clock_data(cfg)})
-    fields = ['is_active', 'pos_left', 'pos_top', 'font_size', 'color', 'z_index']
-    for f in fields:
-        if f in request.data:
-            setattr(cfg, f, request.data[f])
-    cfg.save()
-    return Response({'ok': True, 'data': _clock_data(cfg)})
+def restore_revision(request, revision_id):
+    revision = get_object_or_404(EditorRevision, pk=revision_id)
+    snapshot = revision.snapshot_json or {}
+    layers = snapshot.get('layers', [])
 
+    try:
+        with transaction.atomic():
+            revision.scene.layers.all().delete()
+            for item in layers:
+                SceneLayer.objects.create(
+                    scene=revision.scene,
+                    layer_type=item['layer_type'],
+                    layer_tier=SceneLayer.TYPE_TIER_MAP[item['layer_type']],
+                    z_index=item.get('z_index', 0),
+                    enabled=item.get('enabled', True),
+                    x=item.get('x', 0),
+                    y=item.get('y', 0),
+                    width=item.get('width', 200),
+                    height=item.get('height', 200),
+                    rotation_deg=item.get('rotation_deg', 0),
+                    scale=item.get('scale', 1),
+                    opacity=item.get('opacity', 1),
+                    settings_json=item.get('settings_json') or {},
+                )
+    except Exception as exc:
+        return bad_request('RESTORE_FAILED', str(exc))
 
-# ── Parallax Config API ───────────────────────────────────────────────────────
+    return Response({'ok': True, 'data': serialize_scene(revision.scene)})
 
-@api_view(['GET', 'POST', 'PATCH'])
-@permission_classes([IsAdminUser])
-def parallax_update(request):
-    cfg = ParallaxConfig.objects.first()
-    if cfg is None:
-        cfg = ParallaxConfig()
-    if request.method == 'GET':
-        return Response({'ok': True, 'data': _parallax_data(cfg)})
-    fields = ['speed', 'blur_px', 'overlay_opacity']
-    for f in fields:
-        if f in request.data:
-            setattr(cfg, f, request.data[f])
-    cfg.save()
-    return Response({'ok': True, 'data': _parallax_data(cfg)})
-
-
-# ── Layout State API ──────────────────────────────────────────────────────────
 
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
-def layout_state(request):
-    stickers = IndexImage.objects.filter(layer=IndexImage.LAYER_STICKER, is_active=True).order_by('z_index')
-    text_blocks = TextBlock.objects.filter(is_active=True)
-    parallax_cfg = ParallaxConfig.objects.first() or ParallaxConfig()
-    clock_cfg    = ClockWidgetConfig.objects.first() or ClockWidgetConfig()
-    return Response({
-        'ok': True,
-        'data': {
-            'stickers':    [_sticker_data(s) for s in stickers],
-            'text_blocks': [_textblock_data(tb) for tb in text_blocks],
-            'parallax':    _parallax_data(parallax_cfg),
-            'clock':       _clock_data(clock_cfg),
-        },
-    })
+def editor_scene_list(request):
+    scenes = PageScene.objects.all().order_by('-is_active', 'id')
+    return Response({'ok': True, 'data': [serialize_scene_summary(s) for s in scenes]})
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def create_scene(request):
+    name = request.data.get('name', 'Untitled Scene').strip() or 'Untitled Scene'
+    viewport_mode = request.data.get('viewport_mode', PageScene.VIEWPORT_BOTH)
+    is_active = bool(request.data.get('is_active', False))
 
-def _sticker_data(s):
+    with transaction.atomic():
+        if is_active:
+            PageScene.objects.filter(is_active=True).update(is_active=False)
+        scene = PageScene.objects.create(name=name, viewport_mode=viewport_mode, is_active=is_active)
+    return Response({'ok': True, 'data': serialize_scene(scene)}, status=status.HTTP_201_CREATED)
+
+
+@api_view(['PATCH'])
+@permission_classes([IsAdminUser])
+def patch_scene(request, scene_id):
+    scene = get_object_or_404(PageScene, pk=scene_id)
+    if 'name' in request.data:
+        scene.name = (request.data.get('name') or '').strip() or scene.name
+    if 'viewport_mode' in request.data:
+        scene.viewport_mode = request.data.get('viewport_mode')
+    if 'is_active' in request.data:
+        active = bool(request.data.get('is_active'))
+        if active:
+            PageScene.objects.filter(is_active=True).exclude(pk=scene.id).update(is_active=False)
+        scene.is_active = active
+    scene.save()
+    return Response({'ok': True, 'data': serialize_scene(scene)})
+
+
+def fallback_scene():
     return {
-        'pk':       s.pk,
-        'title':    s.title,
-        'image':    s.image.url if s.image else None,
-        'pos_left': s.pos_left,
-        'pos_top':  s.pos_top,
-        'width':    s.width,
-        'height':   s.height,
-        'rotate':   s.rotate,
-        'z_index':  s.z_index,
-        'is_active': s.is_active,
+        'id': None,
+        'name': 'Fallback Scene',
+        'is_active': True,
+        'viewport_mode': 'both',
+        'layers': [
+            {
+                'id': 'fallback-text',
+                'layer_type': 'text',
+                'layer_tier': 1,
+                'z_index': 0,
+                'enabled': True,
+                'x': 40,
+                'y': 40,
+                'width': 420,
+                'height': 120,
+                'rotation_deg': 0,
+                'scale': 1,
+                'opacity': 1,
+                'settings_json': {'text': '씬이 비어있습니다. 관리자에서 레이어를 추가하세요.'},
+                'render_z_index': TIER_BASE_MAP[1],
+            }
+        ],
     }
 
 
-def _textblock_data(tb):
+def serialize_scene_summary(scene):
     return {
-        'pk':        tb.pk,
-        'position':  tb.position,
-        'content':   tb.content,
-        'pos_left':  tb.pos_left,
-        'pos_top':   tb.pos_top,
-        'font_size': tb.font_size,
-        'color':     tb.color,
-        'z_index':   tb.z_index,
-        'is_active': tb.is_active,
+        'id': scene.id,
+        'name': scene.name,
+        'is_active': scene.is_active,
+        'viewport_mode': scene.viewport_mode,
+        'created_at': scene.created_at.isoformat(),
+        'updated_at': scene.updated_at.isoformat(),
     }
 
 
-def _parallax_data(cfg):
+def serialize_scene(scene):
+    layer_payload = [serialize_layer(layer) for layer in scene.layers.filter(enabled=True).order_by('layer_tier', 'z_index', 'id')]
     return {
-        'speed':           cfg.speed,
-        'blur_px':         cfg.blur_px,
-        'overlay_opacity': cfg.overlay_opacity,
+        'id': scene.id,
+        'name': scene.name,
+        'is_active': scene.is_active,
+        'viewport_mode': scene.viewport_mode,
+        'layers': layer_payload,
+        'created_at': scene.created_at.isoformat(),
+        'updated_at': scene.updated_at.isoformat(),
     }
 
 
-def _clock_data(cfg):
+def serialize_layer(layer):
     return {
-        'is_active': cfg.is_active,
-        'pos_left':  cfg.pos_left,
-        'pos_top':   cfg.pos_top,
-        'font_size': cfg.font_size,
-        'color':     cfg.color,
-        'z_index':   cfg.z_index,
+        'id': layer.id,
+        'scene_id': layer.scene_id,
+        'layer_type': layer.layer_type,
+        'layer_tier': layer.layer_tier,
+        'z_index': layer.z_index,
+        'enabled': layer.enabled,
+        'x': layer.x,
+        'y': layer.y,
+        'width': layer.width,
+        'height': layer.height,
+        'rotation_deg': layer.rotation_deg,
+        'scale': layer.scale,
+        'opacity': layer.opacity,
+        'settings_json': layer.settings_json,
+        'render_z_index': TIER_BASE_MAP[layer.layer_tier] + layer.z_index,
+        'created_at': layer.created_at.isoformat(),
+        'updated_at': layer.updated_at.isoformat(),
     }
+
+
+def serialize_asset(asset):
+    return {
+        'id': asset.id,
+        'kind': asset.kind,
+        'mime_type': asset.mime_type,
+        'storage_path': asset.storage_path,
+        'width': asset.width,
+        'height': asset.height,
+        'bytes': asset.bytes,
+        'hash_sha256': asset.hash_sha256,
+        'original_deleted_at': asset.original_deleted_at.isoformat() if asset.original_deleted_at else None,
+        'created_at': asset.created_at.isoformat(),
+    }
+
+
+def bad_request(error_code, message):
+    return Response({'ok': False, 'error_code': error_code, 'error': message}, status=status.HTTP_400_BAD_REQUEST)
+
+
+def validate_upload(file):
+    max_bytes = 15 * 1024 * 1024
+    if file.size > max_bytes:
+        raise ValueError('File exceeds size limit')
+
+
+def transcode_to_webp(image, quality):
+    output = io.BytesIO()
+    img = image.copy()
+    if img.mode not in ('RGB', 'RGBA'):
+        img = img.convert('RGBA')
+    img.save(output, format='WEBP', quality=quality, method=6)
+    return output.getvalue()
+
+
+def transcode_to_avif(image, quality):
+    output = io.BytesIO()
+    img = image.copy()
+    if img.mode not in ('RGB', 'RGBA'):
+        img = img.convert('RGBA')
+    img.save(output, format='AVIF', quality=quality)
+    return output.getvalue()
+
+
+def generate_variants(image):
+    variants = {'full': image.copy()}
+    limits = {
+        'large': 1920,
+        'medium': 1280,
+        'thumb': 512,
+    }
+    for key, max_side in limits.items():
+        variant = image.copy()
+        variant.thumbnail((max_side, max_side), Image.Resampling.LANCZOS)
+        variants[key] = variant
+    return variants
+
+
+def purge_original(temp_path):
+    try:
+        os.remove(temp_path)
+    except FileNotFoundError:
+        pass
