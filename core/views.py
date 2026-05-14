@@ -15,10 +15,10 @@ from django.utils import timezone
 from PIL import Image, ImageOps, UnidentifiedImageError
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAdminUser
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 
-from .models import EditorRevision, MediaAsset, PageScene, SceneLayer
+from .models import CustomFont, EditorRevision, MediaAsset, PageScene, SceneLayer
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +46,13 @@ TIER_BASE_MAP = {
 
 STICKER_Z_MIN = 0
 STICKER_Z_MAX = 999
+ALLOWED_FONT_EXTENSIONS = {'.woff', '.woff2', '.ttf', '.otf'}
+FONT_FORMAT_MAP = {
+    '.woff': 'woff',
+    '.woff2': 'woff2',
+    '.ttf': 'truetype',
+    '.otf': 'opentype',
+}
 
 
 def healthz(request):
@@ -62,6 +69,24 @@ def active_scene(request):
     if scene is None:
         return Response({'ok': True, 'data': fallback_scene()}, status=status.HTTP_200_OK)
     return Response({'ok': True, 'data': serialize_scene(scene)}, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def current_user_profile(request):
+    user = request.user
+    profile_image_url = request.build_absolute_uri(user.profile_image.url) if user.profile_image else None
+    return Response(
+        {
+            'ok': True,
+            'data': {
+                'nickname': user.nickname,
+                'points': user.points,
+                'profile_image_url': profile_image_url,
+            },
+        },
+        status=status.HTTP_200_OK,
+    )
 
 
 @api_view(['POST'])
@@ -337,6 +362,86 @@ def asset_list(request):
     return Response({'ok': True, 'data': data})
 
 
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def editor_font_list(request):
+    fonts = CustomFont.objects.all().order_by('name', 'id')
+    return Response({'ok': True, 'data': [serialize_custom_font(font) for font in fonts]})
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def register_font_url(request):
+    name = (request.data.get('name') or '').strip()
+    font_family = (request.data.get('font_family') or '').strip()
+    url = (request.data.get('url') or '').strip()
+    if not name or not font_family or not url:
+        return bad_request('INVALID_REQUEST', 'name, font_family and url are required')
+
+    font, _ = CustomFont.objects.get_or_create(
+        name=name,
+        defaults={
+            'font_family': font_family,
+            'source_type': CustomFont.SOURCE_URL,
+            'url': url,
+        },
+    )
+    if font.source_type == CustomFont.SOURCE_UPLOAD and font.file_path:
+        try:
+            if default_storage.exists(font.file_path):
+                default_storage.delete(font.file_path)
+        except Exception as exc:
+            logger.warning('Failed to delete previous font file %s: %s', font.file_path, exc)
+    font.font_family = font_family
+    font.source_type = CustomFont.SOURCE_URL
+    font.url = url
+    font.file_path = ''
+    font.format = ''
+    font.save()
+    return Response({'ok': True, 'data': serialize_custom_font(font)}, status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def upload_font(request):
+    file = request.FILES.get('file')
+    name = (request.data.get('name') or '').strip()
+    font_family = (request.data.get('font_family') or '').strip()
+    if not file or not name or not font_family:
+        return bad_request('INVALID_REQUEST', 'file, name and font_family are required')
+
+    ext = os.path.splitext(file.name or '')[1].lower()
+    if ext not in ALLOWED_FONT_EXTENSIONS:
+        return bad_request('INVALID_REQUEST', 'unsupported font extension')
+
+    storage_path = default_storage.save(f'core/fonts/{uuid.uuid4().hex}{ext}', ContentFile(file.read()))
+    font, _ = CustomFont.objects.get_or_create(
+        name=name,
+        defaults={
+            'font_family': font_family,
+            'source_type': CustomFont.SOURCE_UPLOAD,
+            'file_path': storage_path,
+            'format': FONT_FORMAT_MAP[ext],
+        },
+    )
+
+    previous_file_path = font.file_path if font.file_path and font.file_path != storage_path else ''
+    if previous_file_path:
+        try:
+            if default_storage.exists(previous_file_path):
+                default_storage.delete(previous_file_path)
+        except Exception as exc:
+            logger.warning('Failed to delete previous font file %s: %s', previous_file_path, exc)
+
+    font.font_family = font_family
+    font.source_type = CustomFont.SOURCE_UPLOAD
+    font.url = ''
+    font.file_path = storage_path
+    font.format = FONT_FORMAT_MAP[ext]
+    font.save()
+    return Response({'ok': True, 'data': serialize_custom_font(font)}, status=status.HTTP_201_CREATED)
+
+
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
 def create_scene(request):
@@ -373,6 +478,20 @@ def delete_asset(request, asset_id):
             logger.warning('Failed to delete storage file %s: %s', path, e)
 
     asset.delete()
+    return Response({'ok': True}, status=status.HTTP_200_OK)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAdminUser])
+def delete_font(request, font_id):
+    font = get_object_or_404(CustomFont, pk=font_id)
+    if font.file_path:
+        try:
+            if default_storage.exists(font.file_path):
+                default_storage.delete(font.file_path)
+        except Exception as exc:
+            logger.warning('Failed to delete font file %s: %s', font.file_path, exc)
+    font.delete()
     return Response({'ok': True}, status=status.HTTP_200_OK)
 
 
@@ -478,6 +597,26 @@ def serialize_asset(asset):
         'hash_sha256': asset.hash_sha256,
         'original_deleted_at': asset.original_deleted_at.isoformat() if asset.original_deleted_at else None,
         'created_at': asset.created_at.isoformat(),
+    }
+
+
+def serialize_custom_font(font):
+    if font.source_type == CustomFont.SOURCE_UPLOAD and font.file_path:
+        try:
+            font_url = default_storage.url(font.file_path)
+        except Exception:
+            font_url = ''
+    else:
+        font_url = font.url
+    return {
+        'id': font.id,
+        'name': font.name,
+        'font_family': font.font_family,
+        'source_type': font.source_type,
+        'url': font_url,
+        'file_path': font.file_path,
+        'format': font.format,
+        'created_at': font.created_at.isoformat(),
     }
 
 

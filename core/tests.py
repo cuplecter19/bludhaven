@@ -1,12 +1,15 @@
 import io
 import struct
+import tempfile
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
+from django.test.utils import override_settings
 from rest_framework.test import APIClient
 
-from .models import PageScene, SceneLayer
+from .models import CustomFont, PageScene, SceneLayer
 from .views import validate_file_magic_bytes
 
 
@@ -41,6 +44,7 @@ class SceneLayerModelTests(TestCase):
             'text': 1,
             'clock': 1,
             'menu_button': 1,
+            'user_profile': 1,
             'sticker': 2,
             'parallax_near': 3,
             'parallax_ultra_near': 4,
@@ -311,6 +315,77 @@ class SceneApiTests(TestCase):
         self.assertEqual(restore.status_code, 200)
         self.assertEqual(SceneLayer.objects.filter(scene=self.scene).count(), 1)
 
+    def test_current_user_profile_requires_authentication(self):
+        response = self.client.get('/api/user/profile/')
+        self.assertIn(response.status_code, (401, 403))
+
+    def test_current_user_profile_returns_current_user_data(self):
+        self.client.force_authenticate(user=self.admin)
+        self.admin.points = 1234
+        self.admin.save(update_fields=['points'])
+
+        response = self.client.get('/api/user/profile/')
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertTrue(body['ok'])
+        self.assertEqual(body['data']['nickname'], self.admin.nickname)
+        self.assertEqual(body['data']['points'], 1234)
+        self.assertIsNone(body['data']['profile_image_url'])
+
+
+@override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+class FontApiTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        user_model = get_user_model()
+        self.admin = user_model.objects.create_superuser(
+            username='fontadmin',
+            password='pass1234',
+            email='fontadmin@example.com',
+            nickname='fontadmin',
+        )
+        self.client.force_authenticate(user=self.admin)
+
+    def test_register_font_url_and_list_fonts(self):
+        response = self.client.post(
+            '/api/editor/fonts/register-url',
+            {'name': 'Pretendard CDN', 'font_family': 'Pretendard', 'url': 'https://example.com/font.woff2'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(CustomFont.objects.count(), 1)
+
+        listing = self.client.get('/api/editor/fonts/')
+        self.assertEqual(listing.status_code, 200)
+        self.assertEqual(listing.json()['data'][0]['font_family'], 'Pretendard')
+        self.assertEqual(listing.json()['data'][0]['url'], 'https://example.com/font.woff2')
+
+    def test_upload_font_and_delete_font(self):
+        upload = SimpleUploadedFile('sample.woff2', b'font-bytes', content_type='font/woff2')
+        response = self.client.post(
+            '/api/editor/fonts/upload',
+            {'name': 'Uploaded Font', 'font_family': 'UploadedFamily', 'file': upload},
+            format='multipart',
+        )
+        self.assertEqual(response.status_code, 201)
+        font = CustomFont.objects.get(name='Uploaded Font')
+        self.assertTrue(font.file_path.endswith('.woff2'))
+        self.assertEqual(font.format, 'woff2')
+
+        delete = self.client.delete(f'/api/editor/fonts/{font.id}/delete')
+        self.assertEqual(delete.status_code, 200)
+        self.assertFalse(CustomFont.objects.filter(id=font.id).exists())
+
+    def test_upload_font_rejects_invalid_extension(self):
+        upload = SimpleUploadedFile('sample.txt', b'font-bytes', content_type='text/plain')
+        response = self.client.post(
+            '/api/editor/fonts/upload',
+            {'name': 'Bad Font', 'font_family': 'BadFamily', 'file': upload},
+            format='multipart',
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(CustomFont.objects.count(), 0)
+
 
 class UploadValidationTests(TestCase):
     def setUp(self):
@@ -357,4 +432,3 @@ class UploadValidationTests(TestCase):
             format='multipart',
         )
         self.assertEqual(response.status_code, 403)
-

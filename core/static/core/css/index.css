@@ -54,6 +54,18 @@ html, body { width: 100%; height: 100%; margin: 0; padding: 0; background: var(-
   border-radius: 6px;
 }
 
+.scene-layer--menu-button {
+  background: none !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+
+.scene-layer--menu-button a {
+  background: none;
+  padding: 0;
+  display: inline;
+}
+
 .scene-layer--clock {
   font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   letter-spacing: 0.04em;

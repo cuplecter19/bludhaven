@@ -52,6 +52,7 @@
                 <option value="text">text</option>
                 <option value="clock">clock</option>
                 <option value="menu_button">menu_button</option>
+                <option value="user_profile">user_profile</option>
                 <option value="sticker">sticker</option>
                 <option value="parallax_near">parallax_near</option>
                 <option value="parallax_ultra_near">parallax_ultra_near</option>
@@ -70,6 +71,21 @@
                 <option value="generic">generic</option>
             </select>
             <button id="asset-upload-btn" type="button">업로드</button>
+        </div>
+
+        <div class="editor-panel__section">
+            <label>폰트 관리</label>
+            <input id="font-name-input" type="text" placeholder="폰트 이름">
+            <input id="font-family-input" type="text" placeholder="font-family 값">
+            <input id="font-url-input" type="text" placeholder="웹폰트 URL">
+            <button id="font-url-register-btn" type="button">URL 등록</button>
+            <hr>
+            <input id="font-file-name-input" type="text" placeholder="폰트 이름">
+            <input id="font-file-family-input" type="text" placeholder="font-family 값">
+            <input id="font-file-input" type="file" accept=".woff,.woff2,.ttf,.otf">
+            <button id="font-file-upload-btn" type="button">파일 업로드</button>
+            <hr>
+            <ul id="font-list" class="font-list"></ul>
         </div>
 
         <div class="editor-panel__section">
@@ -106,6 +122,55 @@
                 <label>Opacity</label><input id="prop-opacity" type="number" step="0.01" min="0" max="1">
                 <label>Z</label><input id="prop-z" type="number" step="1" min="0">
                 <label>Text</label><input id="prop-text" type="text">
+                <div id="text-style-section" class="text-style-section" hidden>
+                    <label>Font Family</label>
+                    <select id="prop-font-family">
+                        <option value="">-- 기본 폰트 --</option>
+                    </select>
+                    <label>Font Weight</label>
+                    <select id="prop-font-weight">
+                        <option value="">-- 기본 두께 --</option>
+                        <option value="300">300</option>
+                        <option value="400">400</option>
+                        <option value="700">700</option>
+                        <option value="900">900</option>
+                    </select>
+                    <label>Style</label>
+                    <div class="toggle-row">
+                        <button id="toggle-italic" type="button">Italic</button>
+                        <button id="toggle-underline" type="button">Underline</button>
+                        <button id="toggle-strikethrough" type="button">Strike</button>
+                    </div>
+                    <label>Size Mode</label>
+                    <select id="prop-size-mode">
+                        <option value="font">font</option>
+                        <option value="box">box</option>
+                    </select>
+                    <label>Font Size</label><input id="prop-font-size" type="text" placeholder="ex) 48px">
+                    <label>Letter Spacing</label><input id="prop-letter-spacing" type="text" placeholder="ex) 0.02em">
+                    <label>Line Height</label><input id="prop-line-height" type="number" step="0.1" min="0">
+                    <label>Text Color</label>
+                    <div class="color-input-row">
+                        <input id="prop-text-color" type="color">
+                        <input id="prop-text-color-text" type="text" placeholder="#ffffff">
+                    </div>
+                    <label>Border Width</label><input id="prop-border-width" type="number" step="1" min="0" max="50">
+                    <label>Border Style</label>
+                    <select id="prop-border-style">
+                        <option value="solid">solid</option>
+                        <option value="dashed">dashed</option>
+                        <option value="dotted">dotted</option>
+                    </select>
+                    <label>Border Color</label>
+                    <div class="color-input-row">
+                        <input id="prop-border-color" type="color">
+                        <input id="prop-border-color-text" type="text" placeholder="#000000">
+                    </div>
+                    <div id="clock-font-size-section" class="clock-font-size-section" hidden>
+                        <label>Time Font Size</label><input id="prop-time-font-size" type="text" placeholder="ex) 48px">
+                        <label>Date Font Size</label><input id="prop-date-font-size" type="text" placeholder="ex) 16px">
+                    </div>
+                </div>
                 <label>URL</label><input id="prop-url" type="text">
                 <label>Asset URL</label><input id="prop-asset" type="text">
                     <!-- 이미지 fit 설정 -->

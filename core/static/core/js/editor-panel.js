@@ -1,5 +1,8 @@
 import { uploadAsset } from './asset-uploader.js';
 
+const TEXT_STYLE_LAYER_TYPES = new Set(['text', 'bg_text', 'menu_button', 'clock', 'user_profile']);
+const HEX_COLOR_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+
 function getCsrfToken() {
   const match = document.cookie.match('(^|;)\\s*csrftoken\\s*=\\s*([^;]+)');
   return match ? match.pop() : '';
@@ -21,6 +24,35 @@ async function api(url, { method = 'GET', body, formData } = {}) {
   return res.json();
 }
 
+function parseUnitValue(str, fallbackUnit = 'px') {
+  const value = String(str ?? '').trim();
+  if (value.endsWith('%')) return { value: parseFloat(value) || 0, unit: '%' };
+  if (value.endsWith('px')) return { value: parseFloat(value) || 0, unit: 'px' };
+  return { value: parseFloat(value) || 0, unit: fallbackUnit };
+}
+
+function normalizeHexColor(value, fallback) {
+  const normalized = String(value || '').trim();
+  return HEX_COLOR_RE.test(normalized) ? normalized : fallback;
+}
+
+function setToggleState(button, isActive) {
+  if (!button) return;
+  button.classList.toggle('is-active', isActive);
+  button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+}
+
+function ensureSelectOption(select, value) {
+  if (!select || !value) return;
+  const hasOption = Array.from(select.options).some((option) => option.value === value);
+  if (!hasOption) {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = value;
+    select.appendChild(option);
+  }
+}
+
 export function initEditorPanel({ store, root, render, onStickerToggle }) {
   const panel = document.getElementById('editor-panel');
   if (!panel) return null;
@@ -31,20 +63,18 @@ export function initEditorPanel({ store, root, render, onStickerToggle }) {
   const layerList = document.getElementById('layer-list');
   const sceneSelect = document.getElementById('scene-select');
   const viewportSelect = document.getElementById('viewport-mode-select');
-
-  const propIds = {
-    x: 'prop-x',
-    y: 'prop-y',
-    width: 'prop-width',
-    height: 'prop-height',
-    rotation_deg: 'prop-rotation',
-    scale: 'prop-scale',
-    opacity: 'prop-opacity',
-    z_index: 'prop-z',
-    text: 'prop-text',
-    url: 'prop-url',
-    asset_url: 'prop-asset',
-  };
+  const textStyleSection = document.getElementById('text-style-section');
+  const clockFontSizeSection = document.getElementById('clock-font-size-section');
+  const fontSelect = document.getElementById('prop-font-family');
+  const fontList = document.getElementById('font-list');
+  const assetLibrarySection = document.getElementById('asset-library-section');
+  const assetThumbGrid = document.getElementById('asset-thumb-grid');
+  const assetTabs = document.querySelectorAll('.asset-tab');
+  const toggleItalic = document.getElementById('toggle-italic');
+  const toggleUnderline = document.getElementById('toggle-underline');
+  const toggleStrikethrough = document.getElementById('toggle-strikethrough');
+  let currentAssetKind = 'background';
+  let assetCache = {};
 
   const showError = (msg) => {
     errorEl.hidden = false;
@@ -61,48 +91,63 @@ export function initEditorPanel({ store, root, render, onStickerToggle }) {
     return state.layers.find((layer) => String(layer.id) === String(state.selectedLayerId));
   }
 
-  function refreshLayerList(state) {
-    layerList.innerHTML = '';
-    for (const layer of state.layers.slice().sort((a, b) => a.layer_tier - b.layer_tier || a.z_index - b.z_index || a.id - b.id)) {
-      const li = document.createElement('li');
-      li.textContent = `${layer.layer_type} t${layer.layer_tier} z${layer.z_index} #${layer.id}`;
-      if (String(layer.id) === String(state.selectedLayerId)) li.classList.add('is-selected');
-      li.addEventListener('click', () => store.selectLayer(layer.id));
-      layerList.appendChild(li);
-    }
+  function getLayerTextValue(layer, settings) {
+    if (layer.layer_type === 'menu_button') return settings.label ?? settings.text ?? '';
+    if (layer.layer_type === 'user_profile') return settings.guest_text ?? settings.text ?? '';
+    return settings.text ?? '';
   }
 
-  // 기존 fillLayerProps 교체
-function fillLayerProps(layer) {
-  if (!layer) return;
-  const s = layer.settings_json || {};
+  function refreshTextStyleVisibility(layer) {
+    const type = layer?.layer_type;
+    const showTextStyles = TEXT_STYLE_LAYER_TYPES.has(type);
+    textStyleSection.hidden = !showTextStyles;
+    clockFontSizeSection.hidden = type !== 'clock';
+  }
 
-  // 좌표/크기는 값+단위 문자열로 표시 (ex: "50%", "200px")
-  document.getElementById('prop-x').value      = `${layer.x}${s.x_unit || 'px'}`;
-  document.getElementById('prop-y').value      = `${layer.y}${s.y_unit || 'px'}`;
-  document.getElementById('prop-width').value  = `${layer.width}${s.width_unit || 'px'}`;
-  document.getElementById('prop-height').value = `${layer.height}${s.height_unit || 'px'}`;
+  function fillLayerProps(layer) {
+    if (!layer) {
+      refreshTextStyleVisibility(null);
+      return;
+    }
 
-  document.getElementById('prop-rotation').value = layer.rotation_deg ?? 0;
-  document.getElementById('prop-scale').value    = layer.scale ?? 1;
-  document.getElementById('prop-opacity').value  = layer.opacity ?? 1;
-  document.getElementById('prop-z').value        = layer.z_index ?? 0;
-  document.getElementById('prop-text').value     = s.text  ?? '';
-  document.getElementById('prop-url').value      = s.url   ?? '';
-  document.getElementById('prop-asset').value    = s.asset_url ?? '';
+    const s = layer.settings_json || {};
+    document.getElementById('prop-x').value = `${layer.x}${s.x_unit || 'px'}`;
+    document.getElementById('prop-y').value = `${layer.y}${s.y_unit || 'px'}`;
+    document.getElementById('prop-width').value = `${layer.width}${s.width_unit || 'px'}`;
+    document.getElementById('prop-height').value = `${layer.height}${s.height_unit || 'px'}`;
+    document.getElementById('prop-rotation').value = layer.rotation_deg ?? 0;
+    document.getElementById('prop-scale').value = layer.scale ?? 1;
+    document.getElementById('prop-opacity').value = layer.opacity ?? 1;
+    document.getElementById('prop-z').value = layer.z_index ?? 0;
+    document.getElementById('prop-text').value = getLayerTextValue(layer, s);
+    document.getElementById('prop-url').value = s.url ?? '';
+    document.getElementById('prop-asset').value = s.asset_url ?? '';
+    document.getElementById('prop-fit').value = s.fit || 'cover';
 
-  // fit 셀렉트 반영
-  const fitSelect = document.getElementById('prop-fit');
-  if (fitSelect) fitSelect.value = s.fit || 'cover';
-}
+    ensureSelectOption(fontSelect, s.font_family || '');
+    fontSelect.value = s.font_family || '';
+    document.getElementById('prop-font-weight').value = s.font_weight || '';
+    document.getElementById('prop-size-mode').value = s.size_mode || 'font';
+    document.getElementById('prop-font-size').value = s.font_size || '';
+    document.getElementById('prop-letter-spacing').value = s.letter_spacing || '';
+    document.getElementById('prop-line-height').value = s.line_height ?? '';
 
-function parseUnitValue(str, fallbackUnit = 'px') {
-  const s = String(str ?? '').trim();
-  if (s.endsWith('%'))  return { value: parseFloat(s) || 0, unit: '%'  };
-  if (s.endsWith('px')) return { value: parseFloat(s) || 0, unit: 'px' };
-  // 단위 없이 숫자만 입력하면 fallback 단위 사용
-  return { value: parseFloat(s) || 0, unit: fallbackUnit };
-}
+    const textColor = s.text_color || s.color || '#ffffff';
+    const borderColor = s.border_color || '#000000';
+    document.getElementById('prop-text-color').value = normalizeHexColor(textColor, '#ffffff');
+    document.getElementById('prop-text-color-text').value = textColor;
+    document.getElementById('prop-border-width').value = s.border_width ?? 0;
+    document.getElementById('prop-border-style').value = s.border_style || 'solid';
+    document.getElementById('prop-border-color').value = normalizeHexColor(borderColor, '#000000');
+    document.getElementById('prop-border-color-text').value = borderColor;
+    document.getElementById('prop-time-font-size').value = s.time_font_size || '';
+    document.getElementById('prop-date-font-size').value = s.date_font_size || '';
+
+    setToggleState(toggleItalic, s.font_style === 'italic');
+    setToggleState(toggleUnderline, s.text_decoration === 'underline');
+    setToggleState(toggleStrikethrough, s.text_decoration === 'line-through');
+    refreshTextStyleVisibility(layer);
+  }
 
   function syncDirty(state) {
     dirtyEl.textContent = state.isDirty ? 'Dirty' : 'Saved';
@@ -130,6 +175,17 @@ function parseUnitValue(str, fallbackUnit = 'px') {
     render();
   }
 
+  function refreshLayerList(state) {
+    layerList.innerHTML = '';
+    for (const layer of state.layers.slice().sort((a, b) => a.layer_tier - b.layer_tier || a.z_index - b.z_index || a.id - b.id)) {
+      const li = document.createElement('li');
+      li.textContent = `${layer.layer_type} t${layer.layer_tier} z${layer.z_index} #${layer.id}`;
+      if (String(layer.id) === String(state.selectedLayerId)) li.classList.add('is-selected');
+      li.addEventListener('click', () => store.selectLayer(layer.id));
+      layerList.appendChild(li);
+    }
+  }
+
   function bindPanelDrag() {
     const handle = document.getElementById('editor-panel-handle');
     let sx = 0;
@@ -145,8 +201,8 @@ function parseUnitValue(str, fallbackUnit = 'px') {
       st = rect.top;
 
       const onMove = (ev) => {
-        const rect = panel.getBoundingClientRect();
-        const newLeft = Math.max(0, Math.min(window.innerWidth - rect.width, sl + ev.clientX - sx));
+        const panelBounds = panel.getBoundingClientRect();
+        const newLeft = Math.max(0, Math.min(window.innerWidth - panelBounds.width, sl + ev.clientX - sx));
         const newTop = Math.max(0, Math.min(window.innerHeight - 40, st + ev.clientY - sy));
         panel.style.left = `${newLeft}px`;
         panel.style.top = `${newTop}px`;
@@ -161,15 +217,158 @@ function parseUnitValue(str, fallbackUnit = 'px') {
     });
   }
 
+  function injectFontFace(font) {
+    if (!font.url) return;
+    const id = `bh-font-${font.id}`;
+    if (document.getElementById(id)) return;
+    const style = document.createElement('style');
+    style.id = id;
+    style.textContent = `@font-face { font-family: '${font.font_family}'; src: url('${font.url}')${font.format ? ` format('${font.format}')` : ''}; font-display: swap; }`;
+    document.head.appendChild(style);
+  }
+
+  function renderFontList(fonts) {
+    fontList.innerHTML = '';
+    for (const font of fonts) {
+      const item = document.createElement('li');
+      const label = document.createElement('span');
+      label.textContent = `${font.name} (${font.font_family})`;
+      label.style.fontFamily = font.font_family;
+
+      const deleteButton = document.createElement('button');
+      deleteButton.type = 'button';
+      deleteButton.textContent = '삭제';
+      deleteButton.addEventListener('click', async () => {
+        const res = await api(`/api/editor/fonts/${font.id}/delete`, { method: 'DELETE' });
+        if (!res.ok) return showError(res.error || 'font delete failed');
+        await loadFonts();
+      });
+
+      item.append(label, deleteButton);
+      fontList.appendChild(item);
+    }
+  }
+
+  async function loadFonts() {
+    const res = await api('/api/editor/fonts/');
+    if (!res.ok) return;
+    const currentValue = fontSelect.value;
+    fontSelect.innerHTML = '<option value="">-- 기본 폰트 --</option>';
+    for (const font of res.data) {
+      const option = document.createElement('option');
+      option.value = font.font_family;
+      option.textContent = font.name;
+      fontSelect.appendChild(option);
+      injectFontFace(font);
+    }
+    ensureSelectOption(fontSelect, currentValue);
+    fontSelect.value = currentValue || '';
+    renderFontList(res.data);
+  }
+
+  function bindColorPair(pickerId, textId, fallback) {
+    const picker = document.getElementById(pickerId);
+    const text = document.getElementById(textId);
+
+    picker.addEventListener('input', () => {
+      text.value = picker.value;
+    });
+    text.addEventListener('input', () => {
+      const normalized = normalizeHexColor(text.value, '');
+      if (normalized) picker.value = normalized;
+    });
+
+    if (!text.value) text.value = fallback;
+    picker.value = normalizeHexColor(text.value, fallback);
+  }
+
+  async function loadAssets(kind) {
+    if (assetCache[kind]) {
+      renderAssetGrid(assetCache[kind]);
+      return;
+    }
+    const res = await api(`/api/assets?kind=${kind}`);
+    if (!res.ok) return;
+    assetCache[kind] = res.data;
+    renderAssetGrid(res.data);
+  }
+
+  function renderAssetGrid(assets) {
+    assetThumbGrid.innerHTML = '';
+    if (!assets.length) {
+      assetThumbGrid.innerHTML = '<p class="asset-empty">업로드된 에셋 없음</p>';
+      return;
+    }
+
+    for (const asset of assets) {
+      const thumb = document.createElement('div');
+      thumb.className = 'asset-thumb';
+      thumb.title = `${asset.width}×${asset.height} · ${(asset.bytes / 1024).toFixed(0)}KB`;
+
+      const img = document.createElement('img');
+      img.src = asset.thumb_url;
+      img.alt = asset.kind;
+      img.loading = 'lazy';
+
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.className = 'asset-thumb__delete';
+      delBtn.textContent = '✕';
+      delBtn.title = '에셋 삭제';
+      delBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (!confirm('이 에셋을 삭제하면 복구할 수 없습니다. 계속하시겠습니까?')) return;
+        const res = await api(`/api/assets/${asset.id}/delete`, { method: 'DELETE' });
+        if (!res.ok) return showError(res.error || '에셋 삭제 실패');
+        delete assetCache[currentAssetKind];
+        await loadAssets(currentAssetKind);
+      });
+
+      thumb.addEventListener('click', () => {
+        const assetInput = document.getElementById('prop-asset');
+        assetInput.value = asset.full_url;
+        assetInput.style.outline = '2px solid #5cb2ff';
+        setTimeout(() => {
+          assetInput.style.outline = '';
+        }, 1200);
+      });
+
+      thumb.append(img, delBtn);
+      assetThumbGrid.appendChild(thumb);
+    }
+  }
+
+  bindColorPair('prop-text-color', 'prop-text-color-text', '#ffffff');
+  bindColorPair('prop-border-color', 'prop-border-color-text', '#000000');
+
+  toggleItalic.addEventListener('click', () => setToggleState(toggleItalic, !toggleItalic.classList.contains('is-active')));
+  toggleUnderline.addEventListener('click', () => {
+    const nextState = !toggleUnderline.classList.contains('is-active');
+    setToggleState(toggleUnderline, nextState);
+    if (nextState) setToggleState(toggleStrikethrough, false);
+  });
+  toggleStrikethrough.addEventListener('click', () => {
+    const nextState = !toggleStrikethrough.classList.contains('is-active');
+    setToggleState(toggleStrikethrough, nextState);
+    if (nextState) setToggleState(toggleUnderline, false);
+  });
+
   store.subscribe((state) => {
     refreshLayerList(state);
     syncDirty(state);
     fillLayerProps(getSelectedLayer());
     viewportSelect.value = state.viewportMode || 'both';
+    assetLibrarySection.hidden = !state.scene?.id;
   });
 
-  document.getElementById('undo-btn').addEventListener('click', () => { store.undo(); render(); });
-  document.getElementById('redo-btn').addEventListener('click', () => { store.redo(); render(); });
+  document.getElementById('undo-btn').addEventListener('click', () => {
+    store.undo();
+    render();
+  });
+  document.getElementById('redo-btn').addEventListener('click', () => {
+    store.redo();
+    render();
+  });
 
   document.getElementById('add-layer-btn').addEventListener('click', async () => {
     clearError();
@@ -186,45 +385,73 @@ function parseUnitValue(str, fallbackUnit = 'px') {
   });
 
   document.getElementById('prop-apply-btn').addEventListener('click', async () => {
-  clearError();
-  const layer = getSelectedLayer();
-  if (!layer) return;
-  const s = layer.settings_json || {};
+    clearError();
+    const layer = getSelectedLayer();
+    if (!layer) return;
+    const s = layer.settings_json || {};
+    const px = parseUnitValue(document.getElementById('prop-x').value, s.x_unit || 'px');
+    const py = parseUnitValue(document.getElementById('prop-y').value, s.y_unit || 'px');
+    const pw = parseUnitValue(document.getElementById('prop-width').value, s.width_unit || 'px');
+    const ph = parseUnitValue(document.getElementById('prop-height').value, s.height_unit || 'px');
+    const textValue = document.getElementById('prop-text').value;
+    let textDecoration = 'none';
+    if (toggleUnderline.classList.contains('is-active')) {
+      textDecoration = 'underline';
+    } else if (toggleStrikethrough.classList.contains('is-active')) {
+      textDecoration = 'line-through';
+    }
 
-  const px = parseUnitValue(document.getElementById('prop-x').value,     s.x_unit      || 'px');
-  const py = parseUnitValue(document.getElementById('prop-y').value,     s.y_unit      || 'px');
-  const pw = parseUnitValue(document.getElementById('prop-width').value,  s.width_unit  || 'px');
-  const ph = parseUnitValue(document.getElementById('prop-height').value, s.height_unit || 'px');
-
-  const patch = {
-    x:            px.value,
-    y:            py.value,
-    width:        pw.value,
-    height:       ph.value,
-    rotation_deg: Number(document.getElementById('prop-rotation').value || 0),
-    scale:        Number(document.getElementById('prop-scale').value    || 1),
-    opacity:      Number(document.getElementById('prop-opacity').value  || 1),
-    z_index:      Number(document.getElementById('prop-z').value        || 0),
-    settings_json: {
+    const settingsPatch = {
       ...s,
-      // 단위 저장
-      x_unit:      px.unit,
-      y_unit:      py.unit,
-      width_unit:  pw.unit,
+      x_unit: px.unit,
+      y_unit: py.unit,
+      width_unit: pw.unit,
       height_unit: ph.unit,
-      // 기타 설정
-      fit:         document.getElementById('prop-fit')?.value || s.fit || 'cover',
-      text:        document.getElementById('prop-text').value,
-      url:         document.getElementById('prop-url').value,
-      asset_url:   document.getElementById('prop-asset').value,
-    },
-  };
+      fit: document.getElementById('prop-fit').value || s.fit || 'cover',
+      url: document.getElementById('prop-url').value,
+      asset_url: document.getElementById('prop-asset').value,
+      font_family: fontSelect.value,
+      font_weight: document.getElementById('prop-font-weight').value || '',
+      font_style: toggleItalic.classList.contains('is-active') ? 'italic' : 'normal',
+      text_decoration: textDecoration,
+      size_mode: document.getElementById('prop-size-mode').value || 'font',
+      font_size: document.getElementById('prop-font-size').value,
+      letter_spacing: document.getElementById('prop-letter-spacing').value,
+      line_height: document.getElementById('prop-line-height').value,
+      text_color: document.getElementById('prop-text-color-text').value,
+      border_width: Number(document.getElementById('prop-border-width').value || 0),
+      border_style: document.getElementById('prop-border-style').value || 'solid',
+      border_color: document.getElementById('prop-border-color-text').value,
+      time_font_size: document.getElementById('prop-time-font-size').value,
+      date_font_size: document.getElementById('prop-date-font-size').value,
+    };
 
-  const res = await api(`/api/editor/layers/${layer.id}`, { method: 'PATCH', body: patch });
-  if (!res.ok) return showError(res.error || 'layer patch failed');
-  store.patchLayer(layer.id, res.data, { recordUndo: true, markDirty: true });
-  render();
-});
+    if (layer.layer_type === 'menu_button') {
+      settingsPatch.label = textValue;
+      settingsPatch.text = textValue;
+    } else if (layer.layer_type === 'user_profile') {
+      settingsPatch.guest_text = textValue;
+    } else {
+      settingsPatch.text = textValue;
+    }
+
+    const patch = {
+      x: px.value,
+      y: py.value,
+      width: pw.value,
+      height: ph.value,
+      rotation_deg: Number(document.getElementById('prop-rotation').value || 0),
+      scale: Number(document.getElementById('prop-scale').value || 1),
+      opacity: Number(document.getElementById('prop-opacity').value || 1),
+      z_index: Number(document.getElementById('prop-z').value || 0),
+      settings_json: settingsPatch,
+    };
+
+    const res = await api(`/api/editor/layers/${layer.id}`, { method: 'PATCH', body: patch });
+    if (!res.ok) return showError(res.error || 'layer patch failed');
+    store.patchLayer(layer.id, res.data, { recordUndo: true, markDirty: true });
+    render();
+  });
 
   document.getElementById('layer-delete-btn').addEventListener('click', async () => {
     const layer = getSelectedLayer();
@@ -240,7 +467,6 @@ function parseUnitValue(str, fallbackUnit = 'px') {
     clearError();
     const { scene, viewportMode } = store.getState();
     if (!scene?.id) return;
-
     const sceneRes = await api(`/api/editor/scenes/${scene.id}`, { method: 'PATCH', body: { viewport_mode: viewportMode } });
     if (!sceneRes.ok) return showError(sceneRes.error || 'scene save failed');
 
@@ -280,7 +506,7 @@ function parseUnitValue(str, fallbackUnit = 'px') {
     const sceneId = Number(sceneSelect.value);
     const scenesRes = await api('/api/editor/scenes');
     if (!scenesRes.ok) return;
-    const scene = scenesRes.data.find((s) => s.id === sceneId);
+    const scene = scenesRes.data.find((item) => item.id === sceneId);
     if (!scene) return;
 
     const active = await api('/api/mainpage/scene/active');
@@ -333,120 +559,66 @@ function parseUnitValue(str, fallbackUnit = 'px') {
     if (currentAssetKind === kind) loadAssets(kind);
 
     const layer = getSelectedLayer();
-    if (layer) {
-      const patch = { settings_json: { ...(layer.settings_json || {}), asset_url: res.data.variants.full_webp || '' } };
-      const updated = await api(`/api/editor/layers/${layer.id}`, { method: 'PATCH', body: patch });
-      if (!updated.ok) return showError(updated.error || 'asset patch failed');
-      store.patchLayer(layer.id, updated.data, { recordUndo: true, markDirty: true });
-      render();
-    }
+    if (!layer) return;
+
+    const patch = { settings_json: { ...(layer.settings_json || {}), asset_url: res.data.variants.full_webp || '' } };
+    const updated = await api(`/api/editor/layers/${layer.id}`, { method: 'PATCH', body: patch });
+    if (!updated.ok) return showError(updated.error || 'asset patch failed');
+    store.patchLayer(layer.id, updated.data, { recordUndo: true, markDirty: true });
+    render();
   });
 
-    // initEditorPanel 내부, bindPanelDrag() 호출 위에 추가
-
-  // ── 에셋 라이브러리 ─────────────────────────────────────────
-  const assetLibrarySection = document.getElementById('asset-library-section');
-  const assetThumbGrid      = document.getElementById('asset-thumb-grid');
-  const assetTabs           = document.querySelectorAll('.asset-tab');
-  let currentAssetKind      = 'background';
-  let assetCache            = {};  // kind → 데이터 캐시
-
-  async function loadAssets(kind) {
-    if (assetCache[kind]) {
-      renderAssetGrid(assetCache[kind]);
-      return;
-    }
-    const res = await api(`/api/assets?kind=${kind}`);
-    if (!res.ok) return;
-    assetCache[kind] = res.data;
-    renderAssetGrid(res.data);
-  }
-
-  function renderAssetGrid(assets) {
-  assetThumbGrid.innerHTML = '';
-  if (!assets.length) {
-    assetThumbGrid.innerHTML = '<p class="asset-empty">업로드된 에셋 없음</p>';
-    return;
-  }
-  for (const asset of assets) {
-    const thumb = document.createElement('div');
-    thumb.className = 'asset-thumb';
-    thumb.title = `${asset.width}×${asset.height} · ${(asset.bytes / 1024).toFixed(0)}KB`;
-
-    const img = document.createElement('img');
-    img.src = asset.thumb_url;
-    img.alt = asset.kind;
-    img.loading = 'lazy';
-
-    // 삭제 버튼
-    const delBtn = document.createElement('button');
-    delBtn.type = 'button';
-    delBtn.className = 'asset-thumb__delete';
-    delBtn.textContent = '✕';
-    delBtn.title = '에셋 삭제';
-    delBtn.addEventListener('click', async (e) => {
-      e.stopPropagation();  // 썸네일 클릭(URL 삽입)과 분리
-      if (!confirm('이 에셋을 삭제하면 복구할 수 없습니다. 계속하시겠습니까?')) return;
-      const res = await api(`/api/assets/${asset.id}/delete`, { method: 'DELETE' });
-      if (!res.ok) return showError(res.error || '에셋 삭제 실패');
-      // 캐시 무효화 후 목록 갱신
-      delete assetCache[currentAssetKind];
-      await loadAssets(currentAssetKind);
-    });
-
-    // 썸네일 클릭 → asset_url 삽입
-    thumb.addEventListener('click', () => {
-      const assetInput = document.getElementById('prop-asset');
-      if (assetInput) {
-        assetInput.value = asset.full_url;
-        assetInput.style.outline = '2px solid #5cb2ff';
-        setTimeout(() => { assetInput.style.outline = ''; }, 1200);
-      }
-    });
-
-    thumb.append(img, delBtn);
-    assetThumbGrid.appendChild(thumb);
-  }
-}
-
-  // 탭 클릭 이벤트
   for (const tab of assetTabs) {
     tab.addEventListener('click', () => {
-      assetTabs.forEach((t) => t.classList.remove('is-active'));
+      assetTabs.forEach((item) => item.classList.remove('is-active'));
       tab.classList.add('is-active');
       currentAssetKind = tab.dataset.kind;
-      // 탭 전환 시 캐시 무효화 (새 업로드 반영)
       delete assetCache[currentAssetKind];
       loadAssets(currentAssetKind);
     });
   }
 
-  // 씬이 로드됐을 때 에셋 라이브러리 표시
-  // 기존 store.subscribe 콜백 안에 추가:
-  store.subscribe((state) => {
-    refreshLayerList(state);
-    syncDirty(state);
-    fillLayerProps(getSelectedLayer());
-    viewportSelect.value = state.viewportMode || 'both';
-
-    // ↓ 추가: 씬이 있으면 에셋 라이브러리 표시
-    if (state.scene?.id) {
-      assetLibrarySection.hidden = false;
-    }
+  document.getElementById('font-url-register-btn').addEventListener('click', async () => {
+    clearError();
+    const res = await api('/api/editor/fonts/register-url', {
+      method: 'POST',
+      body: {
+        name: document.getElementById('font-name-input').value,
+        font_family: document.getElementById('font-family-input').value,
+        url: document.getElementById('font-url-input').value,
+      },
+    });
+    if (!res.ok) return showError(res.error || 'font register failed');
+    await loadFonts();
   });
 
-  // 업로드 성공 후 캐시 무효화 (기존 asset-upload-btn 핸들러 끝에 추가)
-  // delete assetCache[kind]; loadAssets(currentAssetKind);
-  // → 업로드 버튼 핸들러 마지막에 아래 두 줄 추가:
-  //   delete assetCache[kind];
-  //   if (currentAssetKind === kind) loadAssets(kind);
+  document.getElementById('font-file-upload-btn').addEventListener('click', async () => {
+    clearError();
+    const file = document.getElementById('font-file-input').files?.[0];
+    if (!file) return showError('폰트 파일을 선택하세요');
+    const formData = new FormData();
+    formData.append('name', document.getElementById('font-file-name-input').value);
+    formData.append('font_family', document.getElementById('font-file-family-input').value);
+    formData.append('file', file);
+    const res = await api('/api/editor/fonts/upload', {
+      method: 'POST',
+      formData,
+    });
+    if (!res.ok) return showError(res.error || 'font upload failed');
+    await loadFonts();
+  });
 
-  // 초기 로드
+  const initialState = store.getState();
+  refreshLayerList(initialState);
+  syncDirty(initialState);
+  fillLayerProps(getSelectedLayer());
+  viewportSelect.value = initialState.viewportMode || 'both';
+  assetLibrarySection.hidden = !initialState.scene?.id;
+
   loadAssets(currentAssetKind);
-
+  loadFonts();
   bindPanelDrag();
-
-  refreshScenes().catch((e) => showError(e.message));
+  refreshScenes().catch((error) => showError(error.message));
 
   return {
     async saveLayerPatch(layerId, patch) {
