@@ -6,6 +6,7 @@ export const LAYER_TYPE_TIER = {
   text: 1,
   clock: 1,
   menu_button: 1,
+  user_profile: 1,
   sticker: 2,
   parallax_near: 3,
   parallax_ultra_near: 4,
