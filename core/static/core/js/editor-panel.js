@@ -607,6 +607,13 @@ export function initEditorPanel({ store, root, render, onStickerToggle }) {
     await loadFonts();
   });
 
+  const initialState = store.getState();
+  refreshLayerList(initialState);
+  syncDirty(initialState);
+  fillLayerProps(getSelectedLayer());
+  viewportSelect.value = initialState.viewportMode || 'both';
+  assetLibrarySection.hidden = !initialState.scene?.id;
+
   loadAssets(currentAssetKind);
   loadFonts();
   bindPanelDrag();
