@@ -58,6 +58,7 @@ class SceneLayer(models.Model):
     TYPE_TEXT = 'text'
     TYPE_CLOCK = 'clock'
     TYPE_MENU_BUTTON = 'menu_button'
+    TYPE_USER_PROFILE = 'user_profile'
     TYPE_STICKER = 'sticker'
     TYPE_PARALLAX_NEAR = 'parallax_near'
     TYPE_PARALLAX_ULTRA_NEAR = 'parallax_ultra_near'
@@ -70,6 +71,7 @@ class SceneLayer(models.Model):
         (TYPE_TEXT, 'Text'),
         (TYPE_CLOCK, 'Clock'),
         (TYPE_MENU_BUTTON, 'Menu Button'),
+        (TYPE_USER_PROFILE, 'User Profile'),
         (TYPE_STICKER, 'Sticker'),
         (TYPE_PARALLAX_NEAR, 'Parallax Near'),
         (TYPE_PARALLAX_ULTRA_NEAR, 'Parallax Ultra Near'),
@@ -83,6 +85,7 @@ class SceneLayer(models.Model):
         TYPE_TEXT: 1,
         TYPE_CLOCK: 1,
         TYPE_MENU_BUTTON: 1,
+        TYPE_USER_PROFILE: 1,
         TYPE_STICKER: 2,
         TYPE_PARALLAX_NEAR: 3,
         TYPE_PARALLAX_ULTRA_NEAR: 4,
@@ -126,6 +129,29 @@ class SceneLayer(models.Model):
 
     def __str__(self):
         return f'{self.scene_id}:{self.layer_type}({self.z_index})'
+
+
+class CustomFont(models.Model):
+    SOURCE_URL = 'url'
+    SOURCE_UPLOAD = 'upload'
+    SOURCE_CHOICES = [
+        (SOURCE_URL, 'Web Font URL'),
+        (SOURCE_UPLOAD, 'Uploaded File'),
+    ]
+
+    name = models.CharField(max_length=100, unique=True)
+    font_family = models.CharField(max_length=100)
+    source_type = models.CharField(max_length=10, choices=SOURCE_CHOICES)
+    url = models.URLField(max_length=500, blank=True)
+    file_path = models.CharField(max_length=400, blank=True)
+    format = models.CharField(max_length=20, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['name', 'id']
+
+    def __str__(self):
+        return self.name
 
 
 class EditorRevision(models.Model):

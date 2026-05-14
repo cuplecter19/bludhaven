@@ -1,6 +1,53 @@
 import { getRenderZ, getTierForType } from './layer-registry.js';
 import { startClockWidget, stopClockWidget } from './clock-widget.js';
 import { createMenuButtonLayer } from './menu-button-widget.js';
+import { createUserProfileWidget } from './user-profile-widget.js';
+
+function fitTextToBox(el) {
+  if (!el || el.offsetWidth === 0) return;
+
+  const minSize = 6;
+  const maxSize = 300;
+  let low = minSize;
+  let high = maxSize;
+  let best = minSize;
+
+  for (let i = 0; i < 16; i += 1) {
+    const mid = (low + high) / 2;
+    el.style.fontSize = `${mid}px`;
+    const fits = el.scrollWidth <= el.offsetWidth && el.scrollHeight <= el.offsetHeight;
+    if (fits) {
+      best = mid;
+      low = mid;
+    } else {
+      high = mid;
+    }
+  }
+
+  el.style.fontSize = `${Math.floor(best)}px`;
+}
+
+function applyTextLayerStyles(el, s = {}) {
+  const textColor = s.text_color || s.color;
+  const borderWidth = Number(s.border_width || 0);
+
+  el.style.whiteSpace = 'pre-wrap';
+  if (s.font_family) el.style.fontFamily = s.font_family;
+  if (s.font_weight) el.style.fontWeight = String(s.font_weight);
+  if (s.font_style) el.style.fontStyle = s.font_style;
+  if (s.text_decoration) el.style.textDecoration = s.text_decoration;
+  if (textColor) el.style.color = textColor;
+  if (s.font_size && s.size_mode !== 'box') el.style.fontSize = s.font_size;
+  if (s.letter_spacing) el.style.letterSpacing = s.letter_spacing;
+  if (s.line_height) el.style.lineHeight = String(s.line_height);
+  if (s.text_shadow) el.style.textShadow = s.text_shadow;
+  if (borderWidth > 0) {
+    el.style.border = `${borderWidth}px ${s.border_style || 'solid'} ${s.border_color || '#000000'}`;
+  }
+  if (s.size_mode === 'box') {
+    requestAnimationFrame(() => fitTextToBox(el));
+  }
+}
 
 export function normalizeLayer(layer) {
   const normalized = {
@@ -69,6 +116,7 @@ export function createLayerElement(layer) {
   el.className = 'scene-layer';
   el.dataset.layerId = String(layer.id);
   el.dataset.layerType = layer.layer_type;
+  const settings = layer.settings_json || {};
 
   switch (layer.layer_type) {
     case 'bg_image':
@@ -86,22 +134,27 @@ export function createLayerElement(layer) {
     case 'bg_text':
     case 'text': {
       el.classList.add('scene-layer--text');
-      el.textContent = layer.settings_json?.text || '';
-      if (layer.settings_json?.color) el.style.color = layer.settings_json.color;
-      if (layer.settings_json?.font_size) el.style.fontSize = layer.settings_json.font_size;
-      if (layer.settings_json?.letter_spacing) el.style.letterSpacing = layer.settings_json.letter_spacing;
-      if (layer.settings_json?.line_height) el.style.lineHeight = String(layer.settings_json.line_height);
-      if (layer.settings_json?.text_shadow) el.style.textShadow = layer.settings_json.text_shadow;
+      el.textContent = settings.text || '';
+      applyTextLayerStyles(el, settings, layer);
       break;
     }
     case 'clock': {
       el.classList.add('scene-layer--clock');
-      startClockWidget(layer.id, el, layer.settings_json || {});
+      startClockWidget(layer.id, el, settings);
       break;
     }
     case 'menu_button': {
       el.classList.add('scene-layer--menu-button');
       el.appendChild(createMenuButtonLayer(layer));
+      applyTextLayerStyles(el, settings, layer);
+      break;
+    }
+    case 'user_profile': {
+      el.classList.add('scene-layer--user-profile');
+      createUserProfileWidget(layer).then((wrapper) => {
+        el.innerHTML = '';
+        el.appendChild(wrapper);
+      });
       break;
     }
     default:
@@ -123,6 +176,17 @@ export function renderScene(root, scene, options = {}) {
   }
 
   for (const layer of layers) {
+    if (layer.layer_type === 'bg_image' && layer.settings_json?.asset_url) {
+      const url = layer.settings_json.asset_url;
+      document.body.style.backgroundImage = `url('${url}')`;
+      document.body.style.backgroundSize = layer.settings_json.fit === 'contain' ? 'contain' : 'cover';
+      document.body.style.backgroundPosition = 'center center';
+      document.body.style.backgroundRepeat = 'no-repeat';
+      document.body.style.backgroundAttachment = 'fixed';
+      try {
+        localStorage.setItem('bh_bg_url', url);
+      } catch {}
+    }
     const el = createLayerElement(layer);
     applyLayerStyle(el, layer);
     if (options.selectedLayerId != null && String(layer.id) === String(options.selectedLayerId)) {

@@ -10,6 +10,17 @@ const store = createStateStore();
 let parallaxEngine = null;
 let editor = null;
 
+try {
+  const savedBg = localStorage.getItem('bh_bg_url');
+  if (savedBg) {
+    document.body.style.backgroundImage = `url('${savedBg}')`;
+    document.body.style.backgroundSize = 'cover';
+    document.body.style.backgroundPosition = 'center center';
+    document.body.style.backgroundRepeat = 'no-repeat';
+    document.body.style.backgroundAttachment = 'fixed';
+  }
+} catch {}
+
 export async function loadActiveScene() {
   const res = await fetch('/api/mainpage/scene/active', { credentials: 'same-origin' });
   const payload = await res.json();
