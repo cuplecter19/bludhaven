@@ -5,6 +5,9 @@ import { createUserProfileWidget } from './user-profile-widget.js';
 
 function fitTextToBox(el) {
   if (!el || el.offsetWidth === 0) return;
+  const boxWidth = el.offsetWidth;
+  const boxHeight = el.offsetHeight;
+  if (boxWidth === 0 || boxHeight === 0) return;
 
   const minSize = 6;
   const maxSize = 300;
@@ -15,7 +18,7 @@ function fitTextToBox(el) {
   for (let i = 0; i < 16; i += 1) {
     const mid = (low + high) / 2;
     el.style.fontSize = `${mid}px`;
-    const fits = el.scrollWidth <= el.offsetWidth && el.scrollHeight <= el.offsetHeight;
+    const fits = el.scrollWidth <= boxWidth && el.scrollHeight <= boxHeight;
     if (fits) {
       best = mid;
       low = mid;

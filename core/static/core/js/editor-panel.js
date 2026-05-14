@@ -394,11 +394,12 @@ export function initEditorPanel({ store, root, render, onStickerToggle }) {
     const pw = parseUnitValue(document.getElementById('prop-width').value, s.width_unit || 'px');
     const ph = parseUnitValue(document.getElementById('prop-height').value, s.height_unit || 'px');
     const textValue = document.getElementById('prop-text').value;
-    const textDecoration = toggleUnderline.classList.contains('is-active')
-      ? 'underline'
-      : toggleStrikethrough.classList.contains('is-active')
-        ? 'line-through'
-        : 'none';
+    let textDecoration = 'none';
+    if (toggleUnderline.classList.contains('is-active')) {
+      textDecoration = 'underline';
+    } else if (toggleStrikethrough.classList.contains('is-active')) {
+      textDecoration = 'line-through';
+    }
 
     const settingsPatch = {
       ...s,

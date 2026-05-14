@@ -30,12 +30,16 @@ export async function createUserProfileWidget(layer) {
   }
 
   const imgWrapper = document.createElement('div');
-  imgWrapper.style.cssText = 'width:64px;height:64px;border-radius:50%;overflow:hidden;flex-shrink:0;';
-  const img = document.createElement('img');
-  img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
-  img.src = profileData.profile_image_url || '';
-  img.alt = profileData.nickname;
-  imgWrapper.appendChild(img);
+  imgWrapper.style.cssText = 'width:64px;height:64px;border-radius:50%;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.08);';
+  if (profileData.profile_image_url) {
+    const img = document.createElement('img');
+    img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+    img.src = profileData.profile_image_url;
+    img.alt = profileData.nickname;
+    imgWrapper.appendChild(img);
+  } else {
+    imgWrapper.textContent = '👤';
+  }
 
   const nick = document.createElement('div');
   nick.className = 'user-profile-widget__nickname';
