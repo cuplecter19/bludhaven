@@ -135,7 +135,7 @@ export function createLayerElement(layer) {
     case 'text': {
       el.classList.add('scene-layer--text');
       el.textContent = settings.text || '';
-      applyTextLayerStyles(el, settings, layer);
+      applyTextLayerStyles(el, settings);
       break;
     }
     case 'clock': {
@@ -146,7 +146,7 @@ export function createLayerElement(layer) {
     case 'menu_button': {
       el.classList.add('scene-layer--menu-button');
       el.appendChild(createMenuButtonLayer(layer));
-      applyTextLayerStyles(el, settings, layer);
+      applyTextLayerStyles(el, settings);
       break;
     }
     case 'user_profile': {
