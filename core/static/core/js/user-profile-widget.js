@@ -47,7 +47,7 @@ export async function createUserProfileWidget(layer) {
 
   const pts = document.createElement('div');
   pts.className = 'user-profile-widget__points';
-  pts.textContent = `${profileData.points.toLocaleString()} pts`;
+  pts.textContent = `${profileData.points.toLocaleString('ko-KR')} pts`;
 
   wrapper.append(imgWrapper, nick, pts);
   return wrapper;

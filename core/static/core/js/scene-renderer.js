@@ -7,7 +7,7 @@ function fitTextToBox(el) {
   if (!el || el.offsetWidth === 0) return;
   const boxWidth = el.offsetWidth;
   const boxHeight = el.offsetHeight;
-  if (boxWidth === 0 || boxHeight === 0) return;
+  if (boxHeight === 0) return;
 
   const minSize = 6;
   const maxSize = 300;
