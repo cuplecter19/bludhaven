@@ -1,64 +1,118 @@
 {% load static %}
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
-    <title>WORDS | TOYBOX</title>
-    <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'core/css/index.css' %}">
-    <link rel="stylesheet" href="{% static 'leitner/css/dashboard.css' %}">
-    <link rel="stylesheet" href="{% static 'leitner/css/word_list.css' %}">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WORD BOXES | BLUDHAVEN</title>
+  <link rel="stylesheet" href="{% static 'leitner/css/leitner_base.css' %}">
+  <style>
+    .list-container { max-width: 1200px; margin: 4rem auto; padding: 0 4rem; }
+    .page-title { font-family: 'Cinzel'; font-size: 2.5rem; border-bottom: 2px solid var(--navy); padding-bottom: 1rem; margin-bottom: 2rem; }
+    .search-bar { display: flex; gap: 0.75rem; margin-bottom: 2rem; }
+    .search-bar input { flex: 1; padding: 0.8rem 1.2rem; border: 1px solid var(--line); font-size: 0.9rem; font-family: 'Inter', sans-serif; }
+    .tabs { display: flex; gap: 2rem; margin-bottom: 2rem; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+    .tab-item { padding: 1rem 0; color: var(--gray); cursor: pointer; font-weight: 600; font-size: 0.85rem; letter-spacing: 1px; position: relative; white-space: nowrap; }
+    .tab-item.active { color: var(--navy); }
+    .tab-item.active::after { content: ''; position: absolute; bottom: -1px; left: 0; width: 100%; height: 2px; background: var(--navy); }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; padding: 1rem; font-size: 0.75rem; text-transform: uppercase; color: var(--gray); border-bottom: 1px solid var(--line); }
+    td { padding: 1.2rem 1rem; border-bottom: 1px solid var(--line); font-size: 0.95rem; }
+    .word-col { font-weight: 700; font-family: 'Cinzel'; font-size: 1.1rem; }
+    .tag { font-size: 0.7rem; background: var(--line); padding: 0.2rem 0.5rem; margin-left: 0.4rem; color: var(--gray); }
+    .box-badge { font-size: 0.75rem; padding: 0.2rem 0.6rem; font-weight: 600; background: var(--line); color: var(--navy); }
+    .upload-section { margin-top: 4rem; padding: 2rem; border: 1px dashed var(--gray); text-align: center; }
+    .upload-section p { font-size: 0.8rem; color: var(--gray); margin-bottom: 1rem; }
+    tr.hidden-row { display: none; }
+  </style>
 </head>
 <body>
-<div class="main-container">
-    <h1 class="dashboard-title">MY Words</h1>
+  <header>
+    <a href="{% url 'index' %}" class="logo">BLUDHAVEN</a>
+    <nav>
+      <a href="{% url 'leitner:dashboard' %}">STUDY</a>
+      <a href="{% url 'leitner:word_list' %}" class="active">WORD BOXES</a>
+      <a href="{% url 'leitner:review_log' %}">LEARNING LOG</a>
+    </nav>
+  </header>
 
-    <!-- 검색 바 -->
-    <form class="search-form" method="get">
-        <input type="text" name="search" class="search-input" 
-               placeholder="단어 또는 뜻으로 검색..." value="{{ search_query }}">
-        <button type="submit" class="btn-action" style="padding: 0 20px; font-size: 1rem;">SEARCH</button>
+  <div class="list-container">
+    <h2 class="page-title">Word Inventory</h2>
+
+    <form class="search-bar" method="get">
+      <input type="text" name="search" placeholder="단어 또는 뜻 검색 (전체 박스)" value="{{ search_query }}">
+      <button type="submit" class="btn btn-primary" style="padding:0.8rem 2rem;font-size:0.75rem;">SEARCH</button>
+      {% if search_query %}
+        <a href="{% url 'leitner:word_list' %}" class="btn" style="padding:0.8rem 1.5rem;font-size:0.75rem;background:var(--line);color:var(--navy);">CLEAR</a>
+      {% endif %}
     </form>
 
-    {% if cards %}
-    <table class="word-list-table">
-        <thead>
-            <tr>
-                <th>WORD</th>
-                <th>MEANING</th>
-                <th>LEVEL</th>
-                <th>NEXT REVIEW</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for card in cards %}
-            <tr>
-                <td style="font-weight: bold; color: white;">{{ card.sense.word.word }}</td>
-                <td style="color: #ccc;">{{ card.sense.meaning }}</td>
-                <td>
-                    <span class="box-badge box-{{ card.box_number }}">
-                        BOX {{ card.box_number }}
-                    </span>
-                </td>
-                <td style="font-size: 0.9rem; color: #888;">
-                    {% if card.box_number == 5 %}
-                        MASTERED (졸업)
-                    {% else %}
-                        {{ card.next_review_at }}
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <div class="stat-box" style="width: 100%; max-width: 900px;">
-        <p>단어장이 비어있습니다. 단어를 등록하거나 학습을 시작하세요!</p>
+    {% if not search_query %}
+    <div class="tabs" id="box-tabs">
+      <div class="tab-item active" data-box="all">ALL ({{ box_counts.1|add:box_counts.2|add:box_counts.3|add:box_counts.4|add:box_counts.5 }})</div>
+      <div class="tab-item" data-box="1">BOX 01 ({{ box_counts.1 }})</div>
+      <div class="tab-item" data-box="2">BOX 02 ({{ box_counts.2 }})</div>
+      <div class="tab-item" data-box="3">BOX 03 ({{ box_counts.3 }})</div>
+      <div class="tab-item" data-box="4">BOX 04 ({{ box_counts.4 }})</div>
+      <div class="tab-item" data-box="5">BOX 05 — Mastered ({{ box_counts.5 }})</div>
     </div>
     {% endif %}
 
-    <div class="footer-link-container">
-        <a href="{% url 'leitner:dashboard' %}" class="return-link">← RETURN TO HUB</a>
+    {% if cards %}
+    <table>
+      <thead>
+        <tr>
+          <th>Word</th>
+          <th>Meaning</th>
+          <th>Level</th>
+          <th>Next Review</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for card in cards %}
+        <tr data-box="{{ card.box_number }}">
+          <td class="word-col">{{ card.sense.word.word }}
+            {% if card.sense.context_tag %}<span class="tag">{{ card.sense.context_tag }}</span>{% endif %}
+          </td>
+          <td>{{ card.sense.meaning }}</td>
+          <td><span class="box-badge">Box {{ card.box_number }}</span></td>
+          <td style="color:var(--gray); font-size:0.9rem;">
+            {% if card.box_number == 5 %}Mastered{% else %}{{ card.next_review_at }}{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:var(--gray); padding:3rem 0; text-align:center;">
+      {% if search_query %}검색 결과가 없습니다.{% else %}등록된 단어가 없습니다.{% endif %}
+    </p>
+    {% endif %}
+
+    <div class="upload-section">
+      <p>CSV 파일을 업로드하여 단어장을 추가하세요.<br>
+         <small>필수 컬럼: <code>word</code>, <code>meaning</code> / 선택: pronunciation, part_of_speech, example_en, example_ko, context_tag</small>
+      </p>
+      <form method="post" action="{% url 'leitner:upload_words' %}" enctype="multipart/form-data"
+            style="display:inline-flex; gap:1rem; align-items:center;">
+        {% csrf_token %}
+        <input type="file" name="csv_file" accept=".csv" required style="font-size:0.8rem;">
+        <button type="submit" class="btn btn-primary" style="padding:0.7rem 1.5rem; font-size:0.7rem;">Upload CSV</button>
+      </form>
     </div>
-</div>
+  </div>
+
+  <script>
+  document.querySelectorAll('#box-tabs .tab-item').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('#box-tabs .tab-item').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const box = tab.dataset.box;
+      document.querySelectorAll('tbody tr').forEach(row => {
+        row.classList.toggle('hidden-row', box !== 'all' && row.dataset.box !== box);
+      });
+    });
+  });
+  </script>
 </body>
 </html>

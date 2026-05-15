@@ -1,0 +1,29 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Inter:wght@400;600&family=Noto+Serif+KR:wght@300;500&display=swap');
+
+:root {
+  --bg: #F9F9FB; --navy: #0F172A; --blue: #2563EB;
+  --gray: #64748B; --line: #E2E8F0;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); font-family: 'Inter', sans-serif; color: var(--navy); }
+header {
+  padding: 1.5rem 4rem; display: flex; justify-content: space-between;
+  align-items: center; border-bottom: 1px solid var(--line); background: #fff;
+}
+.logo {
+  font-family: 'Cinzel'; font-weight: 700; letter-spacing: 4px;
+  text-decoration: none; color: var(--navy); font-size: 1.2rem;
+}
+nav a {
+  text-decoration: none; color: var(--gray); font-size: 0.8rem;
+  font-weight: 600; letter-spacing: 1px; margin-left: 2rem; transition: 0.3s;
+}
+nav a:hover { color: var(--blue); }
+nav a.active { color: var(--navy); border-bottom: 2px solid var(--navy); padding-bottom: 2px; }
+.btn {
+  padding: 1.2rem 3rem; border: none; font-weight: 600;
+  letter-spacing: 2px; cursor: pointer; transition: 0.3s; text-transform: uppercase;
+  font-family: 'Inter', sans-serif;
+}
+.btn-primary { background: var(--navy); color: #fff; }
+.btn-primary:hover { background: #1e293b; }

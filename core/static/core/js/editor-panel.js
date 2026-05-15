@@ -1,6 +1,10 @@
 import { uploadAsset } from './asset-uploader.js';
 
 const TEXT_STYLE_LAYER_TYPES = new Set(['text', 'bg_text', 'menu_button', 'clock', 'user_profile']);
+const IMAGE_ASSET_LAYER_TYPES = new Set([
+  'bg_image', 'parallax_far', 'main_image',
+  'sticker', 'parallax_near', 'parallax_ultra_near'
+]);
 const HEX_COLOR_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
 function getCsrfToken() {
@@ -67,6 +71,7 @@ export function initEditorPanel({ store, root, render, onStickerToggle }) {
   const clockFontSizeSection = document.getElementById('clock-font-size-section');
   const fontSelect = document.getElementById('prop-font-family');
   const fontList = document.getElementById('font-list');
+  const fontManagementSection = document.getElementById('font-management-section');
   const assetLibrarySection = document.getElementById('asset-library-section');
   const assetThumbGrid = document.getElementById('asset-thumb-grid');
   const assetTabs = document.querySelectorAll('.asset-tab');
@@ -97,16 +102,21 @@ export function initEditorPanel({ store, root, render, onStickerToggle }) {
     return settings.text ?? '';
   }
 
-  function refreshTextStyleVisibility(layer) {
-    const type = layer?.layer_type;
-    const showTextStyles = TEXT_STYLE_LAYER_TYPES.has(type);
-    textStyleSection.hidden = !showTextStyles;
+  function refreshSectionVisibility(layer) {
+    const type = layer?.layer_type ?? null;
+
+    const isTextLayer = TEXT_STYLE_LAYER_TYPES.has(type);
+    textStyleSection.hidden = !isTextLayer;
     clockFontSizeSection.hidden = type !== 'clock';
+    if (fontManagementSection) fontManagementSection.hidden = !isTextLayer;
+
+    const isImageLayer = IMAGE_ASSET_LAYER_TYPES.has(type);
+    assetLibrarySection.hidden = !isImageLayer;
   }
 
   function fillLayerProps(layer) {
     if (!layer) {
-      refreshTextStyleVisibility(null);
+      refreshSectionVisibility(null);
       return;
     }
 
@@ -146,7 +156,7 @@ export function initEditorPanel({ store, root, render, onStickerToggle }) {
     setToggleState(toggleItalic, s.font_style === 'italic');
     setToggleState(toggleUnderline, s.text_decoration === 'underline');
     setToggleState(toggleStrikethrough, s.text_decoration === 'line-through');
-    refreshTextStyleVisibility(layer);
+    refreshSectionVisibility(layer);
   }
 
   function syncDirty(state) {
@@ -358,7 +368,6 @@ export function initEditorPanel({ store, root, render, onStickerToggle }) {
     syncDirty(state);
     fillLayerProps(getSelectedLayer());
     viewportSelect.value = state.viewportMode || 'both';
-    assetLibrarySection.hidden = !state.scene?.id;
   });
 
   document.getElementById('undo-btn').addEventListener('click', () => {
@@ -613,7 +622,7 @@ export function initEditorPanel({ store, root, render, onStickerToggle }) {
   syncDirty(initialState);
   fillLayerProps(getSelectedLayer());
   viewportSelect.value = initialState.viewportMode || 'both';
-  assetLibrarySection.hidden = !initialState.scene?.id;
+  refreshSectionVisibility(getSelectedLayer());
 
   loadAssets(currentAssetKind);
   loadFonts();
