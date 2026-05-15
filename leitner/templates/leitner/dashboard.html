@@ -1,200 +1,172 @@
 {% load static %}
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
-    <title>LEITNER BOX | BLÜDHAVEN</title>
-    <link href="https://fonts.googleapis.com/css2?family=Bangers&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'core/css/index.css' %}">
-    <link rel="stylesheet" href="{% static 'leitner/css/dashboard.css' %}">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LEITNER STUDY | BLUDHAVEN</title>
+  <link rel="stylesheet" href="{% static 'leitner/css/leitner_base.css' %}">
+  <style>
+    .container { max-width: 1000px; margin: 5rem auto; padding: 0 2rem; text-align: center; }
+    .card-meta { font-size: 0.75rem; color: var(--gray); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 2rem; }
+    .word-hero { font-family: 'Cinzel'; font-size: 5.5rem; margin-bottom: 1rem; letter-spacing: -2px; line-height: 1; }
+    .word-info { color: var(--gray); font-size: 1.2rem; font-style: italic; margin-bottom: 4rem; }
+    .answer-box { display: none; margin-top: 2rem; padding-top: 3rem; border-top: 1px solid var(--navy); animation: fadeIn 0.6s ease; }
+    .meaning { font-family: 'Noto Serif KR'; font-size: 2.5rem; font-weight: 500; margin-bottom: 1.5rem; }
+    .example-text { color: var(--gray); font-style: italic; margin-bottom: 0.5rem; }
+    .btn-group { margin-top: 4rem; display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; }
+    .btn-show { width: 350px; }
+    .btn-check { display: none; width: 200px; }
+    .btn-correct { background: #F0FDF4; color: #166534; border: 1px solid #BBF7D0; }
+    .btn-wrong  { background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA; }
+    .answer-input-area { margin-top: 2rem; display: flex; justify-content: center; gap: 1rem; }
+    .answer-input { padding: 0.8rem 1.5rem; border: 1px solid var(--line); font-size: 1rem; width: 340px; font-family: 'Inter', sans-serif; }
+    .hint-box { background: #f8fafc; border: 1px solid var(--line); padding: 1rem 1.5rem; margin: 1rem auto; max-width: 600px; font-size: 0.9rem; color: var(--gray); }
+    .stat-bar { display: flex; justify-content: center; gap: 3rem; margin-bottom: 3rem; padding-bottom: 2rem; border-bottom: 1px solid var(--line); }
+    .stat-item { text-align: center; }
+    .stat-item .num { font-family: 'Cinzel'; font-size: 2rem; font-weight: 700; }
+    .stat-item .lbl { font-size: 0.7rem; color: var(--gray); text-transform: uppercase; letter-spacing: 1px; }
+    .empty-state { color: var(--gray); font-size: 1.1rem; padding: 4rem 0; }
+    .result-correct { color: #166534; font-size: 1.1rem; margin-bottom: 1rem; }
+    .result-wrong { color: #991B1B; font-size: 1.1rem; margin-bottom: 1rem; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; } }
+  </style>
 </head>
 <body>
-<div class="main-container">
+  <header>
+    <a href="{% url 'index' %}" class="logo">BLUDHAVEN</a>
+    <nav>
+      <a href="{% url 'leitner:dashboard' %}" class="active">STUDY</a>
+      <a href="{% url 'leitner:word_list' %}">WORD BOXES</a>
+      <a href="{% url 'leitner:review_log' %}">LEARNING LOG</a>
+    </nav>
+  </header>
 
-    {% if messages %}
-        {% for message in messages %}
-            <div class="msg-box {% if message.tags == 'success' %}msg-success{% else %}msg-error{% endif %}">
-                {{ message }}
-            </div>
-        {% endfor %}
-    {% endif %}
-
-    <h1 class="dashboard-title">LEITNER TRAINING HUB</h1>
-
-    <div class="stat-grid">
-        <div class="stat-box">
-            <h3>TARGETS TODAY</h3>
-            <div class="stat-number">{{ due_cards_count }}</div>
-            <p>오늘 복습해야 할 단어</p>
-        </div>
-        <div class="stat-box">
-            <h3>TOTAL WORDS</h3>
-            <div class="stat-number">{{ total_cards_count }}</div>
-            <p>내 학습장에 있는 단어</p>
-        </div>
+  <div class="container">
+    <div class="stat-bar">
+      <div class="stat-item">
+        <div class="num">{{ due_cards_count }}</div>
+        <div class="lbl">Due Today</div>
+      </div>
+      <div class="stat-item">
+        <div class="num">{{ total_cards_count }}</div>
+        <div class="lbl">Total Words</div>
+      </div>
     </div>
 
     {% if quiz_card %}
-    <div class="quiz-card" id="quiz-card"
-     data-card-id="{{ quiz_card.id }}"
-     data-submit-url="{% url 'leitner:submit_answer' %}"
-     data-hint-en="{{ quiz_card.sense.example_en|default:'' }}"
-     data-hint-ko="{{ quiz_card.sense.example_ko|default:'' }}">
+    <div id="quiz-card"
+         data-card-id="{{ quiz_card.id }}"
+         data-submit-url="{% url 'leitner:submit_answer' %}"
+         data-hint-en="{{ quiz_card.sense.example_en|default:'' }}"
+         data-hint-ko="{{ quiz_card.sense.example_ko|default:'' }}">
 
-        <div class="quiz-progress">
-            <span>Box {{ quiz_card.box_number }} &middot; 오늘 남은 카드 {{ due_cards_count }}장</span>
-        </div>
+      <div class="card-meta">
+        Box {{ quiz_card.box_number }}{% if quiz_card.sense.word.part_of_speech %} • {{ quiz_card.sense.word.part_of_speech }}{% endif %}
+      </div>
+      <h1 class="word-hero">{{ quiz_card.sense.word.word }}</h1>
+      {% if quiz_card.sense.word.pronunciation %}
+        <p class="word-info">{{ quiz_card.sense.word.pronunciation }}</p>
+      {% endif %}
 
-        <div class="quiz-word">{{ quiz_card.sense.word.word }}</div>
+      <div id="hint-area" style="margin-bottom:1rem;">
+        <button class="btn btn-primary" style="padding:0.6rem 1.5rem;font-size:0.75rem;" onclick="showHint()">Show Hint</button>
+      </div>
 
-        {% if quiz_card.sense.word.pronunciation %}
-            <div class="quiz-pronunciation">{{ quiz_card.sense.word.pronunciation }}</div>
+      <div id="answer-input-area" class="answer-input-area">
+        <input type="text" id="answer-input" class="answer-input"
+               placeholder="한국어 뜻을 입력하세요"
+               onkeydown="if(event.key==='Enter') revealAnswer()">
+        <button class="btn btn-primary" style="padding:0.8rem 2rem;" onclick="revealAnswer()">확인</button>
+      </div>
+
+      <div class="answer-box" id="answerArea">
+        <div class="meaning">{{ quiz_card.sense.meaning }}</div>
+        {% if quiz_card.sense.example_en %}
+          <p class="example-text">"{{ quiz_card.sense.example_en }}"</p>
+          <p class="example-text" style="font-size:0.9rem;">{{ quiz_card.sense.example_ko }}</p>
         {% endif %}
-        {% if quiz_card.sense.word.part_of_speech %}
-            <div class="quiz-pos">{{ quiz_card.sense.word.part_of_speech }}</div>
-        {% endif %}
+      </div>
 
-        <!-- 힌트: 처음엔 숨겨져 있음 -->
-        <div class="hint-area" id="hint-area">
-            <button class="btn-hint" onclick="showHint()">힌트 보기</button>
-        </div>
-
-        <!-- 답 입력 전: 입력창 -->
-        <div id="answer-input-area">
-            <input type="text" id="answer-input" class="answer-input"
-                   placeholder="뜻을 한국어로 입력하세요"
-                   onkeydown="if(event.key==='Enter') revealAnswer()">
-            <button class="btn-action" onclick="revealAnswer()">확인</button>
-        </div>
-
-        <!-- 답 확인 후: 정답 표시 + 맞음/틀림 버튼 (처음엔 숨김) -->
-        <div id="answer-reveal-area" style="display:none">
-            <div class="answer-reveal">
-                <div class="answer-meaning">{{ quiz_card.sense.meaning }}</div>
-                {% if quiz_card.sense.example_en %}
-                    <div class="example-en">{{ quiz_card.sense.example_en }}</div>
-                    <div class="example-ko">{{ quiz_card.sense.example_ko }}</div>
-                {% endif %}
-            </div>
-            <div class="verdict-buttons">
-                <button class="btn-correct" onclick="submitAnswer(true)">맞았어요 ✓</button>
-                <button class="btn-wrong" onclick="submitAnswer(false)">틀렸어요 ✗</button>
-            </div>
-        </div>
-
-        <!-- 제출 후 결과 (처음엔 숨김) -->
-        <div id="result-area" style="display:none"></div>
+      <div class="btn-group">
+        <button class="btn btn-primary btn-show" id="revealBtn" onclick="showAnswer()">Show Answer</button>
+        <button class="btn btn-check btn-wrong"   id="wrongBtn"   onclick="submitAnswer(false)">I was wrong</button>
+        <button class="btn btn-check btn-correct" id="correctBtn" onclick="submitAnswer(true)">I got it</button>
+      </div>
+      <div id="result-area" style="margin-top:2rem;"></div>
     </div>
 
     {% else %}
-    <div class="stat-box quiz-empty">
-        <p>오늘 복습할 단어가 없어요. 잘 하셨습니다!</p>
-    </div>
+    <p class="empty-state">오늘 복습할 단어가 없어요. 잘 하셨습니다! 🎉</p>
     {% endif %}
 
-    {% if difficult_cards %}
-    <div class="difficult-section">
-        <h3>자주 틀리는 단어</h3>
-        {% for card in difficult_cards %}
-        <div class="difficult-item">
-            <span>{{ card.sense.word.word }}</span>
-            <span class="wrong-badge">오답 {{ card.wrong_count }}회</span>
-        </div>
-        {% endfor %}
+    <div style="margin-top:4rem; padding-top:2rem; border-top:1px solid var(--line);">
+      <form method="post" action="{% url 'leitner:upload_words' %}"
+            enctype="multipart/form-data"
+            style="display:inline-flex; align-items:center; gap:1rem;">
+        {% csrf_token %}
+        <span style="font-size:0.8rem; color:var(--gray);">CSV 파일로 단어 추가</span>
+        <input type="file" name="csv_file" accept=".csv" required style="font-size:0.8rem;">
+        <button type="submit" class="btn btn-primary" style="padding:0.7rem 1.5rem; font-size:0.7rem;">Upload CSV</button>
+      </form>
     </div>
-    {% endif %}
+  </div>
 
-    <div class="action-grid">
-        <a href="{% url 'leitner:word_list' %}" class="btn-action btn-secondary">VIEW WORDS</a>
+  <script>
+  const quizCardEl = document.getElementById('quiz-card');
+  const QUIZ_URL  = quizCardEl?.dataset.submitUrl ?? null;
+  const CSRF      = '{{ csrf_token }}';
+  let startTime   = Date.now();
 
-        <form method="post" action="{% url 'leitner:upload_words' %}"
-              enctype="multipart/form-data" class="stat-box upload-form">
-            {% csrf_token %}
-            <span class="upload-help-text">새로운 단어 (CSV) 업로드</span>
-            <input type="file" name="csv_file" accept=".csv" required class="file-input">
-            <button type="submit" class="btn-action btn-upload">UPLOAD CSV</button>
-        </form>
-    </div>
-
-    <div class="footer-link-container">
-        <a href="{% url 'index' %}" class="return-link">← RETURN TO BASE (메인으로)</a>
-    </div>
-</div>
-
-<script>
-const quizCardEl = document.getElementById('quiz-card');
-const QUIZ_URL = quizCardEl?.dataset.submitUrl ?? null;
-const CSRF_TOKEN = '{{ csrf_token }}';
-let startTime = Date.now();  // 페이지 로드(단어 노출) 시점
-
-function showHint() {
-    const hintArea = document.getElementById('hint-area');
+  function showHint() {
+    const area = document.getElementById('hint-area');
     const en = quizCardEl.dataset.hintEn;
     const ko = quizCardEl.dataset.hintKo;
+    area.innerHTML = en
+      ? `<div class="hint-box"><em>${en}</em><br><small>${ko}</small></div>`
+      : `<div class="hint-box">등록된 예문이 없어요.</div>`;
+  }
 
-    if (en) {
-        hintArea.innerHTML = `
-            <div class="hint-box">
-                <div class="hint-label">예문 힌트</div>
-                <div>${en}</div>
-                <div class="hint-ko">${ko}</div>
-            </div>`;
-    } else {
-        hintArea.innerHTML = '<div class="hint-box">등록된 예문이 없어요.</div>';
-    }
-}
-
-function revealAnswer() {
-    startTime = Date.now();  // 답 확인 누른 시점으로 갱신
+  function showAnswer() {
+    document.getElementById('answerArea').style.display = 'block';
+    document.getElementById('revealBtn').style.display  = 'none';
     document.getElementById('answer-input-area').style.display = 'none';
-    document.getElementById('answer-reveal-area').style.display = 'block';
-}
+    document.getElementById('wrongBtn').style.display   = 'block';
+    document.getElementById('correctBtn').style.display = 'block';
+  }
 
-function submitAnswer(isCorrect) {
+  function revealAnswer() {
+    startTime = Date.now();
+    document.getElementById('answer-input-area').style.display = 'none';
+    document.getElementById('answerArea').style.display = 'block';
+    document.getElementById('revealBtn').style.display  = 'none';
+    document.getElementById('wrongBtn').style.display   = 'block';
+    document.getElementById('correctBtn').style.display = 'block';
+  }
+
+  function submitAnswer(isCorrect) {
     const responseMs = Date.now() - startTime;
-    document.getElementById('answer-reveal-area').style.display = 'none';
-
+    document.getElementById('wrongBtn').style.display   = 'none';
+    document.getElementById('correctBtn').style.display = 'none';
     fetch(QUIZ_URL, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': CSRF_TOKEN,
-        },
-        body: JSON.stringify({
-            card_id: quizCardEl.dataset.cardId,
-            is_correct: isCorrect,
-            response_ms: responseMs,
-        }),
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ card_id: quizCardEl.dataset.cardId, is_correct: isCorrect, response_ms: responseMs }),
     })
-    .then(res => {
-        if (!res.ok) throw new Error('서버 오류');
-        return res.json();
-    })
+    .then(r => { if (!r.ok) throw new Error(); return r.json(); })
     .then(data => {
-        const resultArea = document.getElementById('result-area');
-        resultArea.style.display = 'block';
-
-        if (isCorrect) {
-            resultArea.innerHTML = `
-                <div class="result-correct">
-                    ✓ 정답! +${data.points_earned}pt<br>
-                    <small>다음 복습: ${data.next_review_at} (Box ${data.box_after})</small>
-                </div>
-                <button class="btn-action" onclick="location.reload()">다음 단어 →</button>`;
-        } else {
-            resultArea.innerHTML = `
-                <div class="result-wrong">
-                    ✗ 다시 Box 1로. 조금만 더 해봐요.<br>
-                    <small>내일 다시 복습해요</small>
-                </div>
-                <button class="btn-action" onclick="location.reload()">다음 단어 →</button>`;
-        }
+      const el = document.getElementById('result-area');
+      el.innerHTML = isCorrect
+        ? `<div class="result-correct">✓ 정답! +${data.points_earned}pt &nbsp;|&nbsp; 다음 복습: ${data.next_review_at} (Box ${data.box_after})</div>
+           <button class="btn btn-primary" style="padding:0.8rem 2rem;" onclick="location.reload()">다음 단어 →</button>`
+        : `<div class="result-wrong">✗ Box 1로 이동합니다. 내일 다시 복습해요.</div>
+           <button class="btn btn-primary" style="padding:0.8rem 2rem;" onclick="location.reload()">다음 단어 →</button>`;
     })
     .catch(() => {
-        const resultArea = document.getElementById('result-area');
-        resultArea.style.display = 'block';
-        resultArea.innerHTML = '<div class="result-wrong">제출 중 오류가 발생했어요. 새로고침 후 다시 시도해주세요.</div>';
+      document.getElementById('result-area').innerHTML =
+        '<div class="result-wrong">오류가 발생했어요. 새로고침 후 다시 시도해주세요.</div>';
     });
-}
-</script>
+  }
+  </script>
 </body>
 </html>
