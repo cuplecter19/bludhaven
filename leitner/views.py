@@ -4,7 +4,7 @@ from datetime import date
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from .models import Word, WordSense, UserCard
+from .models import Word, WordSense, UserCard, ReviewLog
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.db.models import Q
@@ -117,23 +117,42 @@ def submit_answer(request):
 
 @login_required
 def word_list(request):
-    """내 단어장 조회"""
-    search_query = request.GET.get('search', '')
-    
-    # 1. 내 카드들을 가져오되, 단어와 뜻 정보를 미리 연결해서 가져옴 (성능 최적화)
-    cards = UserCard.objects.filter(user=request.user).select_related('sense__word')
-    
-    # 2. 검색어가 있다면 단어 또는 뜻에서 검색
+    search_query = request.GET.get('search', '').strip()
+    all_cards = UserCard.objects.filter(user=request.user).select_related('sense__word')
+    cards = all_cards
     if search_query:
         cards = cards.filter(
-            Q(sense__word__word__icontains=search_query) | 
+            Q(sense__word__word__icontains=search_query) |
             Q(sense__meaning__icontains=search_query)
         )
-        
-    # 3. 박스 번호 순, 그 다음 단어 알파벳 순으로 정렬
     cards = cards.order_by('box_number', 'sense__word__word')
-    
+
+    box_counts = {}
+    for i in range(1, 6):
+        box_counts[i] = all_cards.filter(box_number=i).count()
+
     return render(request, 'leitner/word_list.html', {
         'cards': cards,
-        'search_query': search_query
+        'search_query': search_query,
+        'box_counts': box_counts,
+    })
+
+
+@login_required
+def review_log(request):
+    user = request.user
+    logs = ReviewLog.objects.filter(user=user).select_related(
+        'card__sense__word'
+    ).order_by('-reviewed_at')[:100]
+
+    total_reviewed = ReviewLog.objects.filter(user=user).count()
+    correct_count = ReviewLog.objects.filter(user=user, is_correct=True).count()
+    mastered_count = UserCard.objects.filter(user=user, box_number=5).count()
+    success_rate = round(correct_count / total_reviewed * 100) if total_reviewed > 0 else 0
+
+    return render(request, 'leitner/review_log.html', {
+        'logs': logs,
+        'total_reviewed': total_reviewed,
+        'success_rate': success_rate,
+        'mastered_count': mastered_count,
     })

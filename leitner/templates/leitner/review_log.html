@@ -1,0 +1,72 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LEARNING LOG | BLUDHAVEN</title>
+  <link rel="stylesheet" href="{% static 'leitner/css/leitner_base.css' %}">
+  <style>
+    .log-container { max-width: 900px; margin: 4rem auto; padding: 0 4rem; }
+    .page-title { font-family: 'Cinzel'; font-size: 2.5rem; border-bottom: 2px solid var(--navy); padding-bottom: 1rem; margin-bottom: 3rem; }
+    .stat-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; margin-bottom: 4rem; }
+    .stat-card { padding: 2rem; background: #fff; border: 1px solid var(--line); text-align: center; }
+    .stat-card h4 { font-size: 0.7rem; color: var(--gray); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.75rem; }
+    .stat-card p { font-family: 'Cinzel'; font-size: 2rem; font-weight: 700; }
+    .log-entry { display: flex; align-items: center; padding: 1.5rem 0; border-bottom: 1px solid var(--line); }
+    .log-date { width: 130px; font-size: 0.8rem; color: var(--gray); }
+    .log-status { width: 50px; font-weight: 700; font-size: 1.3rem; }
+    .status-o { color: var(--blue); }
+    .status-x { color: #991B1B; }
+    .log-word { flex: 1; font-family: 'Cinzel'; font-weight: 700; font-size: 1.05rem; }
+    .log-change { font-size: 0.8rem; color: var(--gray); }
+    .empty-log { color: var(--gray); text-align: center; padding: 3rem 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="{% url 'index' %}" class="logo">BLUDHAVEN</a>
+    <nav>
+      <a href="{% url 'leitner:dashboard' %}">STUDY</a>
+      <a href="{% url 'leitner:word_list' %}">WORD BOXES</a>
+      <a href="{% url 'leitner:review_log' %}" class="active">LEARNING LOG</a>
+    </nav>
+  </header>
+
+  <div class="log-container">
+    <h2 class="page-title">Archive</h2>
+
+    <div class="stat-summary">
+      <div class="stat-card">
+        <h4>Total Reviewed</h4>
+        <p>{{ total_reviewed|default:"0" }}</p>
+      </div>
+      <div class="stat-card">
+        <h4>Success Rate</h4>
+        <p>{{ success_rate }}%</p>
+      </div>
+      <div class="stat-card">
+        <h4>Mastered</h4>
+        <p>{{ mastered_count }}</p>
+      </div>
+    </div>
+
+    {% if logs %}
+    <div class="log-list">
+      {% for log in logs %}
+      <div class="log-entry">
+        <div class="log-date">{{ log.reviewed_at|date:"M d, H:i" }}</div>
+        <div class="log-status {% if log.is_correct %}status-o{% else %}status-x{% endif %}">
+          {% if log.is_correct %}O{% else %}X{% endif %}
+        </div>
+        <div class="log-word">{{ log.card.sense.word.word }}</div>
+        <div class="log-change">Box {{ log.box_before }} → {{ log.box_after }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="empty-log">아직 학습 기록이 없어요. 학습을 시작해보세요!</p>
+    {% endif %}
+  </div>
+</body>
+</html>
