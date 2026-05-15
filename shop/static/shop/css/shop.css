@@ -1,483 +1,443 @@
-/* shop/static/shop/css/shop.css */
-
+/* shop.css */
 :root {
-    --nw-blue: #1a6fbe;
-    --nw-blue-dark: #0c447c;
-    --nw-blue-light: #e6f1fb;
-    --nw-blue-border: #378add;
+    --navy: #0F172A;
+    --blue: #2563EB;
+    --bg: #F9F9FB;
+    --line: #E2E8F0;
+    --text-muted: #64748B;
+    --font-serif: 'Cinzel', serif;
+    --font-sans: 'Inter', sans-serif;
+    --font-ko: 'Noto Serif KR', serif;
 }
 
+body {
+    background-color: var(--bg);
+    color: var(--navy);
+    font-family: var(--font-sans);
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+}
 
-/* ── 레이아웃 ── */
-
-.shop-container {
-    max-width: 900px;
+.magazine-layout {
+    max-width: 1200px;
     margin: 0 auto;
-    padding: 2rem 1.5rem;
+    padding: 2rem 4rem;
 }
 
-.shop-title {
-    font-family: 'Bangers', cursive;
-    font-size: 2rem;
-    letter-spacing: 3px;
-    color: var(--nw-blue);
-    margin: 0 0 1.5rem;
+/* ─── Header & Masthead ─────────────────────────────── */
+.shop-header {
+    margin-bottom: 5rem;
+    border-bottom: 2px solid var(--navy);
 }
 
+.header-top {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-serif);
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+    padding-bottom: 1rem;
+}
 
-/* ── 스탯 헤더 ── */
+.shop-masthead {
+    font-family: var(--font-serif);
+    font-size: 5rem;
+    line-height: 0.85;
+    font-weight: 900;
+    text-align: center;
+    margin: 2rem 0 4rem;
+    letter-spacing: -2px;
+}
 
+.sub-mast {
+    font-size: 1.5rem;
+    letter-spacing: 12px;
+    color: var(--blue);
+}
+
+/* ─── Stats ─────────────────────────────────────────── */
 .stat-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 12px;
-    margin-bottom: 2.5rem;
+    grid-template-columns: repeat(3, 1fr);
+    border-top: 1px solid var(--navy);
 }
 
 .stat-box {
-    background: #f4f4f4;
-    border-radius: 8px;
-    padding: 1rem;
+    padding: 1.5rem;
+    border-right: 1px solid var(--line);
+    text-align: center;
 }
 
-.stat-box .stat-label {
-    font-size: 12px;
-    color: #888;
-    margin: 0 0 6px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
+.stat-box:last-child { border-right: none; }
+
+.stat-label {
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
 }
 
-.stat-box .stat-value {
-    font-size: 24px;
-    font-weight: 500;
-    color: #1a1a1a;
-    margin: 0;
+.stat-value {
+    font-family: var(--font-serif);
+    font-size: 1.8rem;
+    font-weight: 700;
 }
 
-.stat-box .stat-value.blue {
-    color: var(--nw-blue);
+/* ─── Messages ──────────────────────────────────────── */
+.message-container {
+    margin-bottom: 2rem;
 }
 
+.msg-box {
+    padding: 0.8rem 1rem;
+    border-left: 3px solid var(--navy);
+    background: #fff;
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+}
 
-/* ── 섹션 ── */
+.msg-box.success { border-color: var(--blue); }
+.msg-box.error   { border-color: #b91c1c; }
+
+/* ─── Section Header ────────────────────────────────── */
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    margin-bottom: 3rem;
+}
 
 .section-title {
-    font-size: 11px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: #888;
-    margin: 0 0 12px;
+    font-family: var(--font-serif);
+    font-size: 1.5rem;
+    white-space: nowrap;
 }
 
+.thin-line {
+    width: 100%;
+    height: 1px;
+    background: var(--navy);
+}
 
-/* ── 아이템 그리드 ── */
-
+/* ─── Item Grid ─────────────────────────────────────── */
 .item-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 16px;
-    margin-bottom: 2.5rem;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 4rem 2rem;
+    margin-bottom: 6rem;
 }
 
 .item-card {
-    background: #fff;
-    border: 1px solid #e5e5e5;
-    border-radius: 12px;
-    padding: 1.25rem;
     display: flex;
     flex-direction: column;
-    gap: 8px;
 }
 
-/* 아이템 아이콘 */
-.item-icon {
-    width: 56px;
-    height: 56px;
-    object-fit: contain;
-    border-radius: 8px;
-    background: #f4f4f4;
-}
-
-.item-icon-placeholder {
-    width: 56px;
-    height: 56px;
-    border-radius: 8px;
-    background: #f0f0f0;
-    border: 1px dashed #ccc;
-}
-
-.item-card .item-name {
-    font-size: 16px;
-    font-weight: 500;
-    color: #1a1a1a;
-    margin: 0;
-}
-
-.item-card .item-desc {
-    font-size: 13px;
-    color: #666;
-    flex: 1;
-    margin: 0;
-}
-
-.badge-row {
+.item-visual {
+    position: relative;
+    aspect-ratio: 1/1;
+    background: #fff;
+    border: 1px solid var(--line);
     display: flex;
-    gap: 6px;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+}
+
+.item-img {
+    width: 80%;
+    height: 80%;
+    object-fit: contain;
+    transition: transform 0.5s ease;
+}
+
+.item-card:hover .item-img {
+    transform: scale(1.1);
+}
+
+.item-placeholder {
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+}
+
+.price-sticker {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: var(--navy);
+    color: #fff;
+    padding: 0.4rem 0.8rem;
+    font-family: var(--font-serif);
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.item-name {
+    font-family: var(--font-serif);
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+}
+
+.item-desc {
+    font-family: var(--font-ko);
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+}
+
+.item-meta {
+    margin-bottom: 1.5rem;
+    display: flex;
+    gap: 0.5rem;
     flex-wrap: wrap;
 }
 
-.badge {
-    font-size: 12px;
-    padding: 3px 10px;
-    border-radius: 20px;
-    font-weight: 500;
+.badge-type {
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.2rem 0.5rem;
+    border: 1px solid var(--navy);
 }
 
-.badge-pt {
-    background: var(--nw-blue-light);
-    color: var(--nw-blue-dark);
+.badge-value {
+    font-size: 0.65rem;
+    font-weight: 700;
+    background: var(--blue);
+    color: #fff;
+    padding: 0.2rem 0.5rem;
 }
 
-.badge-cr {
-    background: #e1f5ee;
-    color: #085041;
+.card-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: auto;
 }
 
-.badge-inv {
-    background: #eeedfe;
-    color: #3c3489;
-}
+.full-width { width: 100%; }
 
 .btn-buy {
-    margin-top: 4px;
     width: 100%;
-    padding: 9px;
-    border-radius: 8px;
-    background: var(--nw-blue);
-    border: none;
+    background: var(--navy);
     color: #fff;
-    font-size: 14px;
-    font-weight: 500;
+    border: none;
+    padding: 1rem;
+    font-family: var(--font-serif);
+    font-size: 0.9rem;
+    letter-spacing: 2px;
     cursor: pointer;
-    transition: background 0.15s;
+    transition: background 0.3s;
 }
 
-.btn-buy:hover {
-    background: var(--nw-blue-dark);
-}
+.btn-buy:hover { background: var(--blue); }
 
 .btn-delete {
     width: 100%;
-    padding: 6px;
-    border-radius: 8px;
     background: none;
-    border: 1px solid #e5e5e5;
-    color: #999;
-    font-size: 12px;
+    border: 1px solid #b91c1c;
+    color: #b91c1c;
+    padding: 0.4rem;
+    font-size: 1rem;
     cursor: pointer;
-    transition: border-color 0.15s, color 0.15s;
+    transition: background 0.2s, color 0.2s;
 }
 
 .btn-delete:hover {
-    border-color: #e24b4a;
-    color: #a32d2d;
+    background: #b91c1c;
+    color: #fff;
 }
 
-
-/* ── 관리자 아이템 추가 폼 ── */
-
-.add-item-form {
-    background: #f9f9f7;
-    border: 1px dashed #ccc;
-    border-radius: 12px;
-    padding: 1.25rem;
-    margin-bottom: 2.5rem;
+.empty-msg {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    grid-column: 1 / -1;
 }
 
-.add-item-form .add-title {
-    font-size: 14px;
-    font-weight: 500;
-    color: #1a1a1a;
-    margin: 0 0 12px;
-}
-
-.add-item-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-bottom: 10px;
-}
-
-.add-item-grid input {
-    padding: 8px 10px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 14px;
-    width: 100%;
-    box-sizing: border-box;
+/* ─── Admin Section (Collapsible) ───────────────────── */
+.admin-section {
     background: #fff;
-    color: #1a1a1a;
+    border: 1px solid var(--line);
+    margin-bottom: 6rem;
+    overflow: hidden;
 }
 
-.add-item-grid input:focus {
-    outline: none;
-    border-color: var(--nw-blue-border);
-}
-
-.add-item-extra {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-bottom: 12px;
-}
-
-.add-item-extra select,
-.add-item-extra input[type="file"] {
-    padding: 8px 10px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 14px;
-    background: #fff;
-    color: #1a1a1a;
-    width: 100%;
-    box-sizing: border-box;
-}
-
-.add-label {
-    font-size: 12px;
-    color: #888;
-    letter-spacing: 0.5px;
-}
-
-.btn-add-item {
-    padding: 8px 20px;
-    border: 1px solid var(--nw-blue-border);
-    border-radius: 8px;
-    background: #fff;
-    color: var(--nw-blue);
-    font-size: 14px;
-    cursor: pointer;
-    transition: background 0.15s;
-}
-
-.btn-add-item:hover {
-    background: var(--nw-blue-light);
-}
-
-
-/* ── 크레딧 정산 버튼 ── */
-
-.spend-bar {
+/* 항상 보이는 헤더 영역 */
+.admin-section-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
-}
-
-.btn-spend {
-    padding: 8px 18px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    background: #fff;
-    color: #1a1a1a;
-    font-size: 14px;
+    padding: 1.5rem 3rem;
     cursor: pointer;
-    transition: border-color 0.15s;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.3s;
+    user-select: none;
 }
 
-.btn-spend:hover {
-    border-color: var(--nw-blue-border);
-    color: var(--nw-blue);
+.admin-section-header:hover {
+    background: var(--bg);
 }
 
+/* 패널이 열렸을 때 헤더 하단 선 표시 */
+.admin-panel-body.is-open ~ .admin-section-header,
+.admin-section-header:has(+ .admin-panel-body.is-open) {
+    border-bottom-color: var(--line);
+}
 
-/* ── 내역 테이블 ── */
+.admin-title {
+    font-family: var(--font-serif);
+    font-size: 1.2rem;
+    margin: 0;
+}
+
+.btn-admin-toggle {
+    background: none;
+    border: 2px solid var(--navy);
+    padding: 0.5rem 1.2rem;
+    font-family: var(--font-serif);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    pointer-events: none; /* 클릭은 부모 div에서 처리 */
+}
+
+.admin-section-header:hover .btn-admin-toggle {
+    background: var(--navy);
+    color: #fff;
+}
+
+/* 접힘/펼침 본문 */
+.admin-panel-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease, padding 0.4s ease;
+    padding: 0 3rem;
+}
+
+.admin-panel-body.is-open {
+    max-height: 800px; /* 충분히 큰 값 */
+    padding: 2.5rem 3rem;
+}
+
+/* ─── Admin Form ─────────────────────────────────────── */
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+}
+
+.full-row { grid-column: span 2; }
+
+input, select {
+    width: 100%;
+    padding: 0.8rem;
+    border: 1px solid var(--line);
+    font-family: var(--font-sans);
+    font-size: 0.9rem;
+    box-sizing: border-box;
+    background: #fff;
+}
+
+input:focus, select:focus {
+    outline: none;
+    border-color: var(--navy);
+}
+
+.file-input-wrapper label {
+    display: block;
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+}
+
+.btn-submit-admin {
+    margin-top: 2rem;
+    background: none;
+    border: 2px solid var(--navy);
+    padding: 1rem 2rem;
+    font-family: var(--font-serif);
+    font-weight: 700;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+}
+
+.btn-submit-admin:hover {
+    background: var(--navy);
+    color: #fff;
+}
+
+/* ─── History / Ledger ───────────────────────────────── */
+.history-section {
+    margin-bottom: 6rem;
+}
+
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 2rem;
+}
+
+.btn-settle {
+    background: none;
+    border: 2px solid var(--navy);
+    padding: 0.6rem 1.4rem;
+    font-family: var(--font-serif);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+}
+
+.btn-settle:hover {
+    background: var(--navy);
+    color: #fff;
+}
 
 .log-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 14px;
-    margin-bottom: 2.5rem;
-    table-layout: fixed;
 }
 
 .log-table th {
     text-align: left;
-    color: #888;
-    font-weight: 400;
-    font-size: 12px;
-    padding: 6px 0;
-    border-bottom: 1px solid #eee;
-    letter-spacing: 1px;
-    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    padding: 1rem;
+    border-bottom: 2px solid var(--navy);
 }
 
 .log-table td {
-    padding: 10px 0;
-    border-bottom: 1px solid #f0f0f0;
-    color: #1a1a1a;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    padding: 1.2rem 1rem;
+    border-bottom: 1px solid var(--line);
+    font-size: 0.9rem;
 }
 
-.amount-plus {
-    color: #085041;
-    font-weight: 500;
-    text-align: right;
-}
+.date-cell   { font-family: var(--font-serif); color: var(--text-muted); }
+.amount-minus { color: #b91c1c; font-weight: 700; text-align: right; }
+.amount-plus  { color: var(--blue); font-weight: 700; text-align: right; }
+.text-right   { text-align: right; }
 
-.amount-minus {
-    color: #a32d2d;
-    font-weight: 500;
-    text-align: right;
-}
-
-
-/* ── 모달 ── */
-
-.modal-backdrop {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.45);
-    z-index: 100;
-    align-items: center;
-    justify-content: center;
-}
-
-.modal-backdrop.active {
-    display: flex;
-}
-
-.modal-box {
-    background: #fff;
-    border-radius: 14px;
-    padding: 1.75rem;
-    width: 100%;
-    max-width: 400px;
-    margin: 1rem;
-}
-
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.25rem;
-}
-
-.modal-header h2 {
-    font-size: 16px;
-    font-weight: 500;
-    color: #1a1a1a;
-    margin: 0;
-}
-
-.modal-close {
-    background: none;
-    border: none;
-    font-size: 20px;
-    color: #999;
-    cursor: pointer;
-    line-height: 1;
-}
-
-.modal-field {
-    margin-bottom: 14px;
-}
-
-.modal-field label {
-    display: block;
-    font-size: 13px;
-    color: #666;
-    margin-bottom: 5px;
-}
-
-.modal-field input,
-.modal-field select {
-    width: 100%;
-    padding: 9px 12px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 14px;
-    box-sizing: border-box;
-    color: #1a1a1a;
-    background: #fff;
-}
-
-.modal-field input:focus,
-.modal-field select:focus {
-    outline: none;
-    border-color: var(--nw-blue-border);
-}
-
-.modal-actions {
-    display: flex;
-    gap: 8px;
-    margin-top: 1.25rem;
-}
-
-.btn-modal-cancel {
-    flex: 1;
-    padding: 10px;
-    background: #f4f4f4;
-    border: none;
-    border-radius: 8px;
-    color: #666;
-    font-size: 14px;
-    cursor: pointer;
-}
-
-.btn-modal-confirm {
-    flex: 1;
-    padding: 10px;
-    background: var(--nw-blue);
-    border: none;
-    border-radius: 8px;
-    color: #fff;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.15s;
-}
-
-.btn-modal-confirm:hover {
-    background: var(--nw-blue-dark);
-}
-
-
-/* ── 메시지 ── */
-
-.msg-box {
-    border-radius: 8px;
-    padding: 12px 16px;
-    margin-bottom: 1rem;
-    font-size: 14px;
-}
-
-.msg-success {
-    background: #e1f5ee;
-    color: #085041;
-    border: 1px solid #9fe1cb;
-}
-
-.msg-error {
-    background: #fcebeb;
-    color: #791f1f;
-    border: 1px solid #f7c1c1;
-}
-
-.footer-link-container {
+/* ─── Footer ─────────────────────────────────────────── */
+.shop-footer {
+    padding: 2rem 0;
+    border-top: 1px solid var(--line);
     margin-top: 2rem;
 }
 
 .return-link {
-    font-size: 14px;
-    color: #888;
+    font-family: var(--font-serif);
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+    color: var(--navy);
     text-decoration: none;
+    transition: color 0.2s;
 }
 
-.return-link:hover {
-    color: var(--nw-blue);
-}
+.return-link:hover { color: var(--blue); }
