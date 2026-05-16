@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head><meta charset="UTF-8"><title>구문 학습 홈</title></head>
+<body>
+<h1>구문·숙어 학습</h1>
+<p>오늘 복습할 카드: <strong>{{ due_count }}</strong>개</p>
+{% if summary %}
+<ul>
+  <li>Cloze 복습: {{ summary.cloze_reviewed }} (정답: {{ summary.cloze_correct }})</li>
+  <li>Scramble: {{ summary.scramble_attempted }} (정답: {{ summary.scramble_correct }})</li>
+</ul>
+{% endif %}
+<nav>
+  <a href="{% url 'phrases:cloze' %}">Cloze 학습 시작</a> |
+  <a href="{% url 'phrases:scramble' %}">Scramble 학습 시작</a> |
+  <a href="{% url 'phrases:stats' %}">통계</a>
+</nav>
+</body>
+</html>

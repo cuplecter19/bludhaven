@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head><meta charset="UTF-8"><title>학습 통계</title></head>
+<body>
+<h1>학습 통계 (최근 30일)</h1>
+<table border="1">
+  <thead>
+    <tr>
+      <th>날짜</th><th>Cloze 복습</th><th>Cloze 정답</th>
+      <th>Scramble 시도</th><th>Scramble 정답</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for s in summaries %}
+    <tr>
+      <td>{{ s.date }}</td>
+      <td>{{ s.cloze_reviewed }}</td>
+      <td>{{ s.cloze_correct }}</td>
+      <td>{{ s.scramble_attempted }}</td>
+      <td>{{ s.scramble_correct }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="5">아직 학습 기록이 없습니다.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+<p><a href="{% url 'phrases:home' %}">← 홈으로</a></p>
+</body>
+</html>

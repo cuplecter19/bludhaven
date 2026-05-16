@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'leitner',
     'shop',
     'scheduler',
+    'phrases',
 ]
 
 MIDDLEWARE = [
