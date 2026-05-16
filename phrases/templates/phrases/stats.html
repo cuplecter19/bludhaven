@@ -80,7 +80,7 @@
           <td>
             {% if s.cloze_reviewed %}
               {% widthratio s.cloze_correct s.cloze_reviewed 100 as rate %}
-              <span class="rate-pill {% if rate >= 80 %}high{% elif rate < 50 %}low{% endif %}">{{ rate }}%</span>
+              <span class="rate-pill {% if rate >= 80 %}high{% elif rate < 50 %}low{% endif %}">Cloze {{ rate }}%</span>
             {% else %}
               <span class="rate-pill">—</span>
             {% endif %}

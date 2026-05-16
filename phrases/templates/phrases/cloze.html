@@ -80,6 +80,7 @@
     document.getElementById('result-area').innerHTML = '';
     document.getElementById('nextBtn').style.display = 'none';
     document.getElementById('checkBtn').style.display = 'none';
+    window._startTime = Date.now();
 
     const res = await fetch("{% url 'phrases:api_cards_due' %}?mode=cloze&limit=1");
     const data = await res.json();
@@ -114,8 +115,7 @@
     const userAnswer = input.value.trim();
     if (!userAnswer) return;
 
-    const startTime = window._startTime || Date.now();
-    const responseMs = Date.now() - startTime;
+    const responseMs = Date.now() - window._startTime;
 
     const res = await fetch("{% url 'phrases:api_review' %}", {
       method: 'POST',
@@ -135,7 +135,6 @@
     document.getElementById('nextBtn').style.display = 'inline-block';
   }
 
-  window._startTime = Date.now();
   loadNextCard();
   </script>
 </body>

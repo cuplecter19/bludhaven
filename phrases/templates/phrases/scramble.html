@@ -124,19 +124,20 @@
     el.classList.add('selected');
     el.onclick = null;
     const word = el.textContent;
+    const entryIndex = selectedOrder.length;
     selectedOrder.push(word);
 
     const track = document.getElementById('answer-track');
     const token = document.createElement('span');
     token.className = 'word-token';
     token.textContent = word;
-    token.onclick = () => removeFromTrack(token, el, word);
+    token.onclick = () => removeFromTrack(token, el, entryIndex);
     track.appendChild(token);
   }
 
-  function removeFromTrack(trackToken, sourceEl, word) {
+  function removeFromTrack(trackToken, sourceEl, entryIndex) {
     trackToken.remove();
-    selectedOrder.splice(selectedOrder.lastIndexOf(word), 1);
+    selectedOrder.splice(entryIndex, 1);
     sourceEl.classList.remove('selected');
     sourceEl.onclick = () => selectWord(sourceEl);
   }
