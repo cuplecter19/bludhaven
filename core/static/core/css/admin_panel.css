@@ -234,3 +234,5 @@
   padding: 7px 8px;
   font-size: 12px;
 }
+
+[hidden] { display: none !important; }
