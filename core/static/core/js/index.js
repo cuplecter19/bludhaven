@@ -30,9 +30,12 @@ async function loadAndInjectFonts() {
       if (!font.url) continue;
       const id = `bh-font-${font.id}`;
       if (document.getElementById(id)) continue;
+      const safeFontFamily = String(font.font_family).replace(/['"\\]/g, '');
+      const safeUrl = String(font.url).replace(/['"\\]/g, '');
+      const safeFormat = font.format ? String(font.format).replace(/['"\\]/g, '') : '';
       const style = document.createElement('style');
       style.id = id;
-      style.textContent = `@font-face { font-family: '${font.font_family}'; src: url('${font.url}')${font.format ? ` format('${font.format}')` : ''}; font-display: swap; }`;
+      style.textContent = `@font-face { font-family: '${safeFontFamily}'; src: url('${safeUrl}')${safeFormat ? ` format('${safeFormat}')` : ''}; font-display: swap; }`;
       document.head.appendChild(style);
     }
   } catch {}
