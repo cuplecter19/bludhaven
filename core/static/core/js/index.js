@@ -21,6 +21,26 @@ try {
   }
 } catch {}
 
+async function loadAndInjectFonts() {
+  try {
+    const res = await fetch('/api/mainpage/fonts', { credentials: 'same-origin' });
+    const payload = await res.json();
+    if (!payload.ok || !Array.isArray(payload.data)) return;
+    for (const font of payload.data) {
+      if (!font.url) continue;
+      const id = `bh-font-${font.id}`;
+      if (document.getElementById(id)) continue;
+      const safeFontFamily = String(font.font_family).replace(/['"\\]/g, '');
+      const safeUrl = String(font.url).replace(/['"\\]/g, '');
+      const safeFormat = font.format ? String(font.format).replace(/['"\\]/g, '') : '';
+      const style = document.createElement('style');
+      style.id = id;
+      style.textContent = `@font-face { font-family: '${safeFontFamily}'; src: url('${safeUrl}')${safeFormat ? ` format('${safeFormat}')` : ''}; font-display: swap; }`;
+      document.head.appendChild(style);
+    }
+  } catch {}
+}
+
 export async function loadActiveScene() {
   const res = await fetch('/api/mainpage/scene/active', { credentials: 'same-origin' });
   const payload = await res.json();
@@ -71,7 +91,7 @@ function render() {
 }
 
 (async function boot() {
-  const scene = await loadActiveScene();
+  const [scene] = await Promise.all([loadActiveScene(), loadAndInjectFonts()]);
   store.setScene(scene);
   render();
 
