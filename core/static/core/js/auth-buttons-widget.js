@@ -12,6 +12,10 @@ export async function createAuthButtonsWidget(layer) {
     s.font_size && s.size_mode !== 'box' ? `font-size:${s.font_size};` : '',
     s.letter_spacing ? `letter-spacing:${s.letter_spacing};` : '',
     s.line_height ? `line-height:${s.line_height};` : '',
+    s.text_align ? `justify-content:${
+      s.text_align === 'center' ? 'center'
+      : s.text_align === 'right' ? 'flex-end'
+      : 'flex-start'};` : '',
   ].join('');
 
   let isLoggedIn = false;
