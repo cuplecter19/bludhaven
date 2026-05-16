@@ -830,10 +830,17 @@ def purge_original(temp_path):
 
 
 def _is_restricted_ip(addr_str):
-    """Return True if the IP address is private, loopback, link-local, reserved or multicast."""
+    """Return True if the IP address is private, loopback, link-local, reserved, multicast or unspecified."""
     try:
         ip = ipaddress.ip_address(addr_str)
-        return ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast
+        return (
+            ip.is_private
+            or ip.is_loopback
+            or ip.is_link_local
+            or ip.is_reserved
+            or ip.is_multicast
+            or ip.is_unspecified
+        )
     except ValueError:
         return True
 
@@ -842,7 +849,7 @@ class _SafeHTTPHandler(urllib.request.HTTPHandler):
     """HTTP handler that blocks connections to restricted IP ranges."""
 
     def http_open(self, req):
-        host = req.host.split(':')[0]
+        host = urllib.parse.urlparse(req.full_url).hostname or ''
         addr_infos = socket.getaddrinfo(host, None)
         for _, _, _, _, sockaddr in addr_infos:
             if _is_restricted_ip(sockaddr[0]):
@@ -854,7 +861,7 @@ class _SafeHTTPSHandler(urllib.request.HTTPSHandler):
     """HTTPS handler that blocks connections to restricted IP ranges."""
 
     def https_open(self, req):
-        host = req.host.split(':')[0]
+        host = urllib.parse.urlparse(req.full_url).hostname or ''
         addr_infos = socket.getaddrinfo(host, None)
         for _, _, _, _, sockaddr in addr_infos:
             if _is_restricted_ip(sockaddr[0]):
