@@ -1,8 +1,178 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="ko">
-<head><meta charset="UTF-8"><title>Scramble 학습</title></head>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SCRAMBLE | BLUDHAVEN</title>
+  <link rel="stylesheet" href="{% static 'phrases/css/phrases_base.css' %}">
+  <style>
+    .container { max-width: 900px; margin: 5rem auto; padding: 0 2rem; text-align: center; }
+    .card-meta {
+      font-size: 0.75rem; color: var(--gray); letter-spacing: 2px;
+      text-transform: uppercase; margin-bottom: 2rem;
+    }
+    .phrase-ko {
+      font-family: 'Noto Serif KR'; font-size: 1.5rem; font-weight: 300;
+      margin-bottom: 3rem; color: var(--navy);
+    }
+    .word-bank {
+      display: flex; flex-wrap: wrap; justify-content: center;
+      gap: 0.75rem; margin-bottom: 2.5rem; min-height: 56px;
+    }
+    .word-token {
+      padding: 0.6rem 1.2rem; background: #fff; border: 1px solid var(--line);
+      font-size: 0.9rem; cursor: pointer; letter-spacing: 0.5px;
+      transition: 0.2s; user-select: none;
+    }
+    .word-token:hover { border-color: var(--accent); background: #fdf8f6; }
+    .word-token.selected { background: var(--navy); color: #fff; border-color: var(--navy); }
+    .answer-track {
+      border-bottom: 2px solid var(--navy); min-height: 56px; padding: 0.5rem;
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.75rem;
+      margin-bottom: 2.5rem;
+    }
+    .answer-track .word-token { cursor: pointer; }
+    .btn-group { display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; }
+    .btn-reset { background: var(--line); color: var(--navy); }
+    .btn-reset:hover { background: #ddd5ce; }
+    .answer-reveal {
+      display: none; margin-top: 2rem; padding-top: 2rem;
+      border-top: 1px solid var(--line); animation: fadeIn 0.5s ease;
+    }
+    .answer-reveal .phrase {
+      font-family: 'Noto Serif KR'; font-size: 1.5rem; font-weight: 500; color: var(--navy);
+    }
+  </style>
+</head>
 <body>
-<h1>Scramble 어순 배열</h1>
-<p><a href="{% url 'phrases:home' %}">← 홈으로</a></p>
+  <header>
+    <a href="{% url 'index' %}" class="logo">BLUDHAVEN</a>
+    <nav>
+      <a href="{% url 'phrases:home' %}">PHRASES</a>
+      <a href="{% url 'phrases:cloze' %}">CLOZE</a>
+      <a href="{% url 'phrases:scramble' %}" class="active">SCRAMBLE</a>
+      <a href="{% url 'phrases:stats' %}">STATS</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <h2 class="page-title">Scramble</h2>
+    <p class="card-meta">단어를 클릭해 올바른 어순으로 배열하세요</p>
+
+    <div id="scramble-area">
+      <p class="empty-state">카드를 불러오는 중...</p>
+    </div>
+
+    <div id="answer-track" class="answer-track" style="display:none;"></div>
+
+    <div class="btn-group" id="action-btns" style="display:none;">
+      <button class="btn btn-reset" onclick="resetTokens()">RESET</button>
+      <button class="btn btn-primary" onclick="submitScramble()">SUBMIT</button>
+    </div>
+
+    <div id="result-area" style="margin-top:2rem;"></div>
+    <div id="answer-reveal" class="answer-reveal"></div>
+
+    <div style="margin-top:2rem;">
+      <button class="btn btn-accent" id="nextBtn" style="display:none; padding:0.8rem 2rem;" onclick="loadNextCard()">다음 카드 →</button>
+    </div>
+  </div>
+
+  <script>
+  const CSRF = '{{ csrf_token }}';
+  let currentCard = null;
+  let scrambledWords = [];
+  let selectedOrder = [];
+  let startTime = Date.now();
+
+  async function loadNextCard() {
+    document.getElementById('result-area').innerHTML = '';
+    document.getElementById('answer-reveal').style.display = 'none';
+    document.getElementById('nextBtn').style.display = 'none';
+    document.getElementById('answer-track').style.display = 'none';
+    document.getElementById('action-btns').style.display = 'none';
+    selectedOrder = [];
+
+    const res = await fetch("{% url 'phrases:api_cards_due' %}?mode=scramble&limit=1");
+    const data = await res.json();
+
+    if (!data.count) {
+      document.getElementById('scramble-area').innerHTML =
+        '<p class="empty-state">오늘 복습할 카드가 없어요. 잘 하셨습니다! 🎉</p>';
+      return;
+    }
+
+    currentCard = data.cards[0];
+    scrambledWords = currentCard.scramble_data.shuffled_words || [];
+    startTime = Date.now();
+
+    const tags = currentCard.tags.map(t => `<span class="tag" style="background:var(--line);padding:0.2rem 0.5rem;font-size:0.7rem;color:var(--gray);">${t.name}</span>`).join('');
+    document.getElementById('scramble-area').innerHTML = `
+      <div class="card-meta">Box ${currentCard.box_number}${tags ? ' · ' + tags : ''}</div>
+      <div class="phrase-ko">${currentCard.phrase_ko || ''}</div>
+      <div id="word-bank" class="word-bank">${scrambledWords.map((w, i) =>
+        `<span class="word-token" data-index="${i}" onclick="selectWord(this)">${w}</span>`
+      ).join('')}</div>
+    `;
+    document.getElementById('answer-track').innerHTML = '';
+    document.getElementById('answer-track').style.display = 'flex';
+    document.getElementById('action-btns').style.display = 'flex';
+  }
+
+  function selectWord(el) {
+    el.classList.add('selected');
+    el.onclick = null;
+    const word = el.textContent;
+    const entryIndex = selectedOrder.length;
+    selectedOrder.push(word);
+
+    const track = document.getElementById('answer-track');
+    const token = document.createElement('span');
+    token.className = 'word-token';
+    token.textContent = word;
+    token.onclick = () => removeFromTrack(token, el, entryIndex);
+    track.appendChild(token);
+  }
+
+  function removeFromTrack(trackToken, sourceEl, entryIndex) {
+    trackToken.remove();
+    selectedOrder.splice(entryIndex, 1);
+    sourceEl.classList.remove('selected');
+    sourceEl.onclick = () => selectWord(sourceEl);
+  }
+
+  function resetTokens() {
+    selectedOrder = [];
+    document.getElementById('answer-track').innerHTML = '';
+    document.querySelectorAll('.word-token').forEach(t => {
+      t.classList.remove('selected');
+      t.onclick = () => selectWord(t);
+    });
+  }
+
+  async function submitScramble() {
+    const timeTakenMs = Date.now() - startTime;
+    const res = await fetch("{% url 'phrases:api_scramble' %}", {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ card_id: currentCard.id, submitted_order: selectedOrder, time_taken_ms: timeTakenMs }),
+    });
+    const data = await res.json();
+
+    document.getElementById('action-btns').style.display = 'none';
+    const el = document.getElementById('result-area');
+    el.innerHTML = data.is_correct
+      ? '<div class="result-correct">✓ 정답입니다!</div>'
+      : '<div class="result-wrong">✗ 오답입니다.</div>';
+
+    const rev = document.getElementById('answer-reveal');
+    rev.innerHTML = `<div class="phrase">${data.correct_order.join(' ')}</div>`;
+    rev.style.display = 'block';
+    document.getElementById('nextBtn').style.display = 'inline-block';
+  }
+
+  loadNextCard();
+  </script>
 </body>
 </html>

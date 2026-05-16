@@ -1,19 +1,111 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="ko">
-<head><meta charset="UTF-8"><title>구문 학습 홈</title></head>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PHRASES | BLUDHAVEN</title>
+  <link rel="stylesheet" href="{% static 'phrases/css/phrases_base.css' %}">
+  <style>
+    .container { max-width: 900px; margin: 5rem auto; padding: 0 2rem; text-align: center; }
+    .section-label {
+      font-size: 0.7rem; color: var(--gray); letter-spacing: 3px;
+      text-transform: uppercase; margin-bottom: 1.5rem;
+    }
+    .hero-title {
+      font-family: 'Cinzel'; font-size: 4rem; letter-spacing: -1px;
+      line-height: 1; margin-bottom: 0.75rem;
+    }
+    .hero-sub {
+      font-family: 'Noto Serif KR'; font-size: 1rem; font-weight: 300;
+      color: var(--gray); margin-bottom: 4rem;
+    }
+    .summary-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr);
+      gap: 1.5rem; margin-bottom: 4rem; text-align: left;
+    }
+    .summary-card {
+      background: #fff; border: 1px solid var(--line);
+      padding: 1.5rem 2rem;
+    }
+    .summary-card .s-label {
+      font-size: 0.7rem; color: var(--gray); text-transform: uppercase;
+      letter-spacing: 1px; margin-bottom: 0.4rem;
+    }
+    .summary-card .s-value {
+      font-family: 'Cinzel'; font-size: 1.6rem; font-weight: 700;
+    }
+    .summary-card .s-sub { font-size: 0.8rem; color: var(--rose); margin-top: 0.2rem; }
+    .action-row { display: flex; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+    .action-btn {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 2rem 3rem; background: #fff; border: 1px solid var(--line);
+      text-decoration: none; color: var(--navy); transition: 0.3s; min-width: 180px;
+    }
+    .action-btn:hover { border-color: var(--accent); background: #fdf8f6; }
+    .action-btn .a-icon { font-size: 2rem; margin-bottom: 0.75rem; }
+    .action-btn .a-title {
+      font-family: 'Cinzel'; font-size: 0.95rem; letter-spacing: 2px;
+      text-transform: uppercase; margin-bottom: 0.3rem;
+    }
+    .action-btn .a-desc { font-size: 0.75rem; color: var(--gray); letter-spacing: 0.5px; }
+  </style>
+</head>
 <body>
-<h1>구문·숙어 학습</h1>
-<p>오늘 복습할 카드: <strong>{{ due_count }}</strong>개</p>
-{% if summary %}
-<ul>
-  <li>Cloze 복습: {{ summary.cloze_reviewed }} (정답: {{ summary.cloze_correct }})</li>
-  <li>Scramble: {{ summary.scramble_attempted }} (정답: {{ summary.scramble_correct }})</li>
-</ul>
-{% endif %}
-<nav>
-  <a href="{% url 'phrases:cloze' %}">Cloze 학습 시작</a> |
-  <a href="{% url 'phrases:scramble' %}">Scramble 학습 시작</a> |
-  <a href="{% url 'phrases:stats' %}">통계</a>
-</nav>
+  <header>
+    <a href="{% url 'index' %}" class="logo">BLUDHAVEN</a>
+    <nav>
+      <a href="{% url 'phrases:home' %}" class="active">PHRASES</a>
+      <a href="{% url 'phrases:cloze' %}">CLOZE</a>
+      <a href="{% url 'phrases:scramble' %}">SCRAMBLE</a>
+      <a href="{% url 'phrases:stats' %}">STATS</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <div class="section-label">구문 · 숙어 학습</div>
+    <h1 class="hero-title">Phrase Studio</h1>
+    <p class="hero-sub">오늘의 학습을 시작하세요</p>
+
+    <div class="stat-bar">
+      <div class="stat-item">
+        <div class="num">{{ due_count }}</div>
+        <div class="lbl">Due Today</div>
+      </div>
+    </div>
+
+    {% if summary %}
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="s-label">Cloze 복습</div>
+        <div class="s-value">{{ summary.cloze_reviewed }}</div>
+        <div class="s-sub">정답 {{ summary.cloze_correct }}개</div>
+      </div>
+      <div class="summary-card">
+        <div class="s-label">Scramble 시도</div>
+        <div class="s-value">{{ summary.scramble_attempted }}</div>
+        <div class="s-sub">정답 {{ summary.scramble_correct }}개</div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="action-row">
+      <a href="{% url 'phrases:cloze' %}" class="action-btn">
+        <span class="a-icon">✏️</span>
+        <span class="a-title">Cloze</span>
+        <span class="a-desc">빈칸 채우기</span>
+      </a>
+      <a href="{% url 'phrases:scramble' %}" class="action-btn">
+        <span class="a-icon">🔀</span>
+        <span class="a-title">Scramble</span>
+        <span class="a-desc">어순 배열</span>
+      </a>
+      <a href="{% url 'phrases:stats' %}" class="action-btn">
+        <span class="a-icon">📊</span>
+        <span class="a-title">Stats</span>
+        <span class="a-desc">학습 통계</span>
+      </a>
+    </div>
+  </div>
 </body>
 </html>
