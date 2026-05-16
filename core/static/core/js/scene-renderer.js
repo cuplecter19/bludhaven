@@ -2,6 +2,7 @@ import { getRenderZ, getTierForType } from './layer-registry.js';
 import { startClockWidget, stopClockWidget } from './clock-widget.js';
 import { createMenuButtonLayer } from './menu-button-widget.js';
 import { createUserProfileWidget } from './user-profile-widget.js';
+import { createAuthButtonsWidget } from './auth-buttons-widget.js';
 
 function fitTextToBox(el) {
   if (!el || el.offsetWidth === 0) return;
@@ -157,6 +158,14 @@ export function createLayerElement(layer) {
     case 'user_profile': {
       el.classList.add('scene-layer--user-profile');
       createUserProfileWidget(layer).then((wrapper) => {
+        el.innerHTML = '';
+        el.appendChild(wrapper);
+      });
+      break;
+    }
+    case 'auth_buttons': {
+      el.classList.add('scene-layer--auth-buttons');
+      createAuthButtonsWidget(layer).then((wrapper) => {
         el.innerHTML = '';
         el.appendChild(wrapper);
       });

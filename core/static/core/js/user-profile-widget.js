@@ -30,7 +30,13 @@ export async function createUserProfileWidget(layer) {
   }
 
   const imgWrapper = document.createElement('div');
-  imgWrapper.style.cssText = 'width:64px;height:64px;border-radius:50%;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.08);';
+  imgWrapper.style.cssText = 'width:64px;height:64px;border-radius:50%;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.08);cursor:pointer;';
+  imgWrapper.title = '프로필 수정';
+  imgWrapper.setAttribute('role', 'link');
+  imgWrapper.setAttribute('aria-label', '프로필 수정');
+  imgWrapper.addEventListener('click', () => {
+    window.location.href = '/accounts/profile/update/';
+  });
   if (profileData.profile_image_url) {
     const img = document.createElement('img');
     img.style.cssText = 'width:100%;height:100%;object-fit:cover;';

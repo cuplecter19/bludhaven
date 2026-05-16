@@ -1,6 +1,6 @@
 import { uploadAsset, uploadAssetFromUrl } from './asset-uploader.js';
 
-const TEXT_STYLE_LAYER_TYPES = new Set(['text', 'bg_text', 'menu_button', 'clock', 'user_profile']);
+const TEXT_STYLE_LAYER_TYPES = new Set(['text', 'bg_text', 'menu_button', 'clock', 'user_profile', 'auth_buttons']);
 const IMAGE_ASSET_LAYER_TYPES = new Set([
   'bg_image', 'parallax_far', 'main_image',
   'sticker', 'parallax_near', 'parallax_ultra_near'
@@ -69,6 +69,7 @@ export function initEditorPanel({ store, root, render, onStickerToggle }) {
   const viewportSelect = document.getElementById('viewport-mode-select');
   const textStyleSection = document.getElementById('text-style-section');
   const clockFontSizeSection = document.getElementById('clock-font-size-section');
+  const authButtonsColorSection = document.getElementById('auth-buttons-color-section');
   const fontSelect = document.getElementById('prop-font-family');
   const fontList = document.getElementById('font-list');
   const assetUploadSection = document.getElementById('asset-upload-section');
@@ -103,6 +104,7 @@ export function initEditorPanel({ store, root, render, onStickerToggle }) {
   function getLayerTextValue(layer, settings) {
     if (layer.layer_type === 'menu_button') return settings.label ?? settings.text ?? '';
     if (layer.layer_type === 'user_profile') return settings.guest_text ?? settings.text ?? '';
+    if (layer.layer_type === 'auth_buttons') return '';
     return settings.text ?? '';
   }
 
@@ -112,6 +114,7 @@ export function initEditorPanel({ store, root, render, onStickerToggle }) {
     const isTextLayer = TEXT_STYLE_LAYER_TYPES.has(type);
     textStyleSection.hidden = !isTextLayer;
     clockFontSizeSection.hidden = type !== 'clock';
+    if (authButtonsColorSection) authButtonsColorSection.hidden = type !== 'auth_buttons';
     if (fontManagementSection) fontManagementSection.hidden = !isTextLayer;
 
     const isImageLayer = IMAGE_ASSET_LAYER_TYPES.has(type);
@@ -164,6 +167,15 @@ export function initEditorPanel({ store, root, render, onStickerToggle }) {
     document.getElementById('prop-border-color-text').value = borderColor;
     document.getElementById('prop-time-font-size').value = s.time_font_size || '';
     document.getElementById('prop-date-font-size').value = s.date_font_size || '';
+
+    if (authButtonsColorSection) {
+      document.getElementById('prop-login-color').value = normalizeHexColor(s.login_color || '', '#ffffff');
+      document.getElementById('prop-login-color-text').value = s.login_color || '';
+      document.getElementById('prop-signup-color').value = normalizeHexColor(s.signup_color || '', '#ffffff');
+      document.getElementById('prop-signup-color-text').value = s.signup_color || '';
+      document.getElementById('prop-logout-color').value = normalizeHexColor(s.logout_color || '', '#ffffff');
+      document.getElementById('prop-logout-color-text').value = s.logout_color || '';
+    }
 
     setToggleState(toggleItalic, s.font_style === 'italic');
     setToggleState(toggleUnderline, s.text_decoration === 'underline');
@@ -417,6 +429,11 @@ export function initEditorPanel({ store, root, render, onStickerToggle }) {
   bindColorPair('prop-text-color', 'prop-text-color-text', '#ffffff');
   bindColorPair('prop-border-color', 'prop-border-color-text', '#000000');
   bindColorPair('prop-bg-color', 'prop-bg-color-text', '#ffffff');
+  if (authButtonsColorSection) {
+    bindColorPair('prop-login-color', 'prop-login-color-text', '#ffffff');
+    bindColorPair('prop-signup-color', 'prop-signup-color-text', '#ffffff');
+    bindColorPair('prop-logout-color', 'prop-logout-color-text', '#ffffff');
+  }
 
   const bgOpacityRange = document.getElementById('prop-bg-opacity');
   const bgOpacityText  = document.getElementById('prop-bg-opacity-text');
@@ -523,6 +540,9 @@ export function initEditorPanel({ store, root, render, onStickerToggle }) {
       border_color: document.getElementById('prop-border-color-text').value,
       time_font_size: document.getElementById('prop-time-font-size').value,
       date_font_size: document.getElementById('prop-date-font-size').value,
+      login_color: authButtonsColorSection ? document.getElementById('prop-login-color-text').value : s.login_color,
+      signup_color: authButtonsColorSection ? document.getElementById('prop-signup-color-text').value : s.signup_color,
+      logout_color: authButtonsColorSection ? document.getElementById('prop-logout-color-text').value : s.logout_color,
     };
 
     if (layer.layer_type === 'menu_button') {
