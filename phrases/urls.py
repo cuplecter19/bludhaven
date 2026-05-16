@@ -17,4 +17,6 @@ urlpatterns = [
     path('api/review/', views.api_review, name='api_review'),
     path('api/scramble/', views.api_scramble, name='api_scramble'),
     path('api/stats/', views.api_stats, name='api_stats'),
+    # CSV upload
+    path('upload-csv/', views.upload_csv, name='upload_csv'),
 ]

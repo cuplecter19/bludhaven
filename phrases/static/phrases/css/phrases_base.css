@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Inter:wght@400;600&family=Noto+Serif+KR:wght@300;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Noto+Sans+KR:wght@300;500&display=swap');
 
 :root {
   --bg: #F9F6F3; --navy: #0F172A; --accent: #9B6B5A;
@@ -13,7 +13,7 @@ header {
   align-items: center; border-bottom: 1px solid var(--line); background: #fff;
 }
 .logo {
-  font-family: 'Cinzel'; font-weight: 700; letter-spacing: 4px;
+  font-family: 'ClassyVogue'; font-weight: 700; letter-spacing: 4px;
   text-decoration: none; color: var(--navy); font-size: 1.2rem;
 }
 nav a {
@@ -36,7 +36,7 @@ nav a.active { color: var(--navy); border-bottom: 2px solid var(--navy); padding
 
 /* ── Page title ── */
 .page-title {
-  font-family: 'Cinzel'; font-size: 2.5rem;
+  font-family: 'ClassyVogue'; font-size: 2.5rem;
   border-bottom: 2px solid var(--navy); padding-bottom: 1rem; margin-bottom: 2rem;
 }
 
@@ -46,14 +46,14 @@ nav a.active { color: var(--navy); border-bottom: 2px solid var(--navy); padding
   margin-bottom: 3rem; padding-bottom: 2rem; border-bottom: 1px solid var(--line);
 }
 .stat-item { text-align: center; }
-.stat-item .num { font-family: 'Cinzel'; font-size: 2rem; font-weight: 700; }
+.stat-item .num { font-family: 'ClassyVogue'; font-size: 2rem; font-weight: 700; }
 .stat-item .lbl { font-size: 0.7rem; color: var(--gray); text-transform: uppercase; letter-spacing: 1px; }
 
 /* ── Stat card grid ── */
 .stat-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; margin-bottom: 4rem; }
 .stat-card { padding: 2rem; background: #fff; border: 1px solid var(--line); text-align: center; }
 .stat-card h4 { font-size: 0.7rem; color: var(--gray); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.75rem; }
-.stat-card p { font-family: 'Cinzel'; font-size: 2rem; font-weight: 700; }
+.stat-card p { font-family: 'ClassyVogue'; font-size: 2rem; font-weight: 700; }
 
 /* ── Answer / result feedback ── */
 .result-correct { color: #166534; font-size: 1.1rem; margin-bottom: 1rem; }
