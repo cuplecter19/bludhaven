@@ -19,8 +19,10 @@ export function startClockWidget(layerId, el, options = {}) {
   if (options.font_style) el.style.fontStyle = options.font_style;
   if (options.text_decoration) el.style.textDecoration = options.text_decoration;
   if (options.font_size && options.size_mode !== 'box') el.style.fontSize = options.font_size;
+  if (options.text_align) el.style.textAlign = options.text_align;
   if (options.letter_spacing) el.style.letterSpacing = options.letter_spacing;
   if (options.line_height) el.style.lineHeight = String(options.line_height);
+  if (options.letter_spacing) el.style.letterSpacing = options.letter_spacing;
   if (options.time_font_size) timeEl.style.fontSize = options.time_font_size;
   if (options.date_font_size) dateEl.style.fontSize = options.date_font_size;
   if (options.border_width) {

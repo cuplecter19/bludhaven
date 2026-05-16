@@ -34,14 +34,14 @@ export async function createAuthButtonsWidget(layer) {
 
   if (isLoggedIn) {
     wrapper.appendChild(
-      makeLink(s.logout_label || '로그아웃', '/accounts/logout/', s.logout_color || s.text_color || s.color || ''),
+      makeLink(s.logout_label || 'Logout', '/accounts/logout/', s.logout_color || s.text_color || s.color || ''),
     );
   } else {
     wrapper.appendChild(
-      makeLink(s.login_label || '로그인', '/accounts/login/', s.login_color || s.text_color || s.color || ''),
+      makeLink(s.login_label || 'Login', '/accounts/login/', s.login_color || s.text_color || s.color || ''),
     );
     wrapper.appendChild(
-      makeLink(s.signup_label || '회원가입', '/accounts/signup/', s.signup_color || s.text_color || s.color || ''),
+      makeLink(s.signup_label || 'Sign Up', '/accounts/signup/', s.signup_color || s.text_color || s.color || ''),
     );
   }
 
