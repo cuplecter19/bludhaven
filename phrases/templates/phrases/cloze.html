@@ -13,7 +13,7 @@
       text-transform: uppercase; margin-bottom: 2rem;
     }
     .phrase-hero {
-      font-family: 'Noto Serif KR'; font-size: 2.2rem; font-weight: 500;
+      font-family: 'Noto Sans KR'; font-size: 2.2rem; font-weight: 500;
       line-height: 1.5; margin-bottom: 1rem;
     }
     .phrase-blank {
@@ -27,7 +27,7 @@
       border-top: 1px solid var(--navy); animation: fadeIn 0.6s ease;
     }
     .answer-phrase {
-      font-family: 'Noto Serif KR'; font-size: 1.8rem; font-weight: 500; margin-bottom: 1rem;
+      font-family: 'Noto Sans KR'; font-size: 1.8rem; font-weight: 500; margin-bottom: 1rem;
     }
     .answer-input-area { margin-top: 2rem; display: flex; justify-content: center; gap: 1rem; }
     .answer-input {
@@ -136,6 +136,27 @@
   }
 
   loadNextCard();
+  </script>
+  <script>
+  (async function() {
+    try {
+      const res = await fetch('/api/mainpage/fonts', { credentials: 'same-origin' });
+      const payload = await res.json();
+      if (!payload.ok || !Array.isArray(payload.data)) return;
+      for (const font of payload.data) {
+        if (!font.url) continue;
+        const id = 'bh-font-' + font.id;
+        if (document.getElementById(id)) continue;
+        const ff = String(font.font_family).replace(/['"\\]/g, '');
+        const url = String(font.url).replace(/['"\\]/g, '');
+        const fmt = font.format ? ` format('${String(font.format).replace(/['"\\]/g, '')}')` : '';
+        const style = document.createElement('style');
+        style.id = id;
+        style.textContent = `@font-face { font-family: '${ff}'; src: url('${url}')${fmt}; font-display: swap; }`;
+        document.head.appendChild(style);
+      }
+    } catch {}
+  })();
   </script>
 </body>
 </html>

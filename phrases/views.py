@@ -1,12 +1,16 @@
+import csv
+import io
 import json
+import re
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.timezone import localdate
 from django.views.decorators.http import require_GET, require_POST
 
-from .models import DailySummary, PhraseCard, ReviewLog, ScrambleAttempt
+from .models import DailySummary, PhraseCard, ReviewLog, ScrambleAttempt, Tag
 from .services import get_due_cards, process_review
 
 
@@ -208,3 +212,107 @@ def api_stats(request):
         )
     )
     return JsonResponse({'summaries': summaries})
+
+
+# ---------------------------------------------------------------------------
+# CSV upload view
+# ---------------------------------------------------------------------------
+
+REQUIRED_COLUMNS = {'sentence_en', 'sentence_ko', 'phrase', 'phrase_ko', 'difficulty', 'tags'}
+
+
+def _inject_hint(sentence_en, phrase, hint):
+    """Embed hint into the blank markup: [phrase] -> [phrase/hint]."""
+    if not hint:
+        return sentence_en
+    pattern = re.compile(r'\[' + re.escape(phrase) + r'(?:/[^\]]*)?\]')
+    return pattern.sub(f'[{phrase}/{hint}]', sentence_en)
+
+
+@login_required
+def upload_csv(request):
+    """POST /upload-csv/ — import PhraseCards from a CSV file."""
+    if request.method != 'POST':
+        return redirect('phrases:home')
+
+    csv_file = request.FILES.get('csv_file')
+    if not csv_file:
+        messages.error(request, 'CSV 파일을 선택해주세요.')
+        return redirect('phrases:home')
+
+    if not csv_file.name.lower().endswith('.csv'):
+        messages.error(request, 'CSV 파일만 업로드할 수 있습니다.')
+        return redirect('phrases:home')
+
+    try:
+        text = csv_file.read().decode('utf-8-sig')
+    except UnicodeDecodeError:
+        messages.error(request, '파일 인코딩을 읽을 수 없습니다. UTF-8 CSV 파일을 업로드해주세요.')
+        return redirect('phrases:home')
+
+    reader = csv.DictReader(io.StringIO(text))
+    if not reader.fieldnames:
+        messages.error(request, 'CSV 파일이 비어 있습니다.')
+        return redirect('phrases:home')
+
+    missing = REQUIRED_COLUMNS - {f.strip() for f in reader.fieldnames}
+    if missing:
+        messages.error(request, f'필수 컬럼이 없습니다: {", ".join(sorted(missing))}')
+        return redirect('phrases:home')
+
+    created = 0
+    errors = []
+    for row_num, row in enumerate(reader, start=2):
+        try:
+            sentence_en = (row.get('sentence_en') or '').strip()
+            sentence_ko = (row.get('sentence_ko') or '').strip()
+            phrase = (row.get('phrase') or '').strip()
+            phrase_ko = (row.get('phrase_ko') or '').strip()
+            difficulty_raw = (row.get('difficulty') or '1').strip()
+            tags_raw = (row.get('tags') or '').strip()
+            hint = (row.get('hint') or '').strip()
+            example_source = (row.get('example_source') or '').strip()
+            memo = (row.get('memo') or '').strip()
+
+            if not all([sentence_en, sentence_ko, phrase, phrase_ko]):
+                errors.append(f'행 {row_num}: 필수 값이 비어 있습니다.')
+                continue
+
+            try:
+                difficulty = int(difficulty_raw)
+                if difficulty not in (1, 2, 3):
+                    difficulty = 1
+            except (ValueError, TypeError):
+                difficulty = 1
+
+            sentence_en = _inject_hint(sentence_en, phrase, hint)
+
+            tag_slugs = [t.strip() for t in tags_raw.split(';') if t.strip()]
+            tag_objects = []
+            for slug in tag_slugs:
+                tag, _ = Tag.objects.get_or_create(name=slug, defaults={'name_ko': slug})
+                tag_objects.append(tag)
+
+            card = PhraseCard.objects.create(
+                user=request.user,
+                sentence_en=sentence_en,
+                sentence_ko=sentence_ko,
+                phrase=phrase,
+                phrase_ko=phrase_ko,
+                difficulty=difficulty,
+                example_source=example_source or None,
+                memo=memo or None,
+            )
+            if tag_objects:
+                card.tags.set(tag_objects)
+            created += 1
+
+        except Exception as exc:
+            errors.append(f'행 {row_num}: {exc}')
+
+    if created:
+        messages.success(request, f'{created}개의 카드를 성공적으로 추가했습니다.')
+    if errors:
+        messages.error(request, '일부 행을 건너뜀: ' + ' / '.join(errors[:5]))
+
+    return redirect('phrases:home')

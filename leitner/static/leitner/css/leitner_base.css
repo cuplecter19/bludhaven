@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Inter:wght@400;600&family=Noto+Serif+KR:wght@300;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Noto+Sans+KR:wght@300;500&display=swap');
 
 :root {
   --bg: #F9F9FB; --navy: #0F172A; --blue: #2563EB;
@@ -11,7 +11,7 @@ header {
   align-items: center; border-bottom: 1px solid var(--line); background: #fff;
 }
 .logo {
-  font-family: 'Cinzel'; font-weight: 700; letter-spacing: 4px;
+  font-family: 'ClassyVogue'; font-weight: 700; letter-spacing: 4px;
   text-decoration: none; color: var(--navy); font-size: 1.2rem;
 }
 nav a {
