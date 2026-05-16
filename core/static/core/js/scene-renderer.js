@@ -4,6 +4,8 @@ import { createMenuButtonLayer } from './menu-button-widget.js';
 import { createUserProfileWidget } from './user-profile-widget.js';
 import { createAuthButtonsWidget } from './auth-buttons-widget.js';
 
+const INTERACTIVE_LAYER_TYPES = new Set(['menu_button', 'auth_buttons']);
+
 function fitTextToBox(el) {
   if (!el || el.offsetWidth === 0) return;
   const boxWidth = el.offsetWidth;
@@ -106,7 +108,10 @@ export function applyLayerStyle(el, layer) {
   el.dataset.baseTransform = baseTransform;
   el.style.opacity     = String(layer.opacity);
   el.style.zIndex      = String(getRenderZ(layer));
-  el.style.pointerEvents = 'auto';
+
+  const isInteractive = INTERACTIVE_LAYER_TYPES.has(layer.layer_type);
+  el.style.pointerEvents = isInteractive ? 'auto' : 'none';
+  if (!isInteractive) el.style.userSelect = 'none';
 
   // 이미지 레이어: fit 설정 적용
   const imageTypes = ['bg_image', 'main_image', 'parallax_far', 'parallax_near', 'parallax_ultra_near', 'sticker'];
@@ -134,6 +139,7 @@ export function createLayerElement(layer) {
       const img = document.createElement('img');
       img.alt = layer.settings_json?.alt || layer.layer_type;
       img.src = layer.settings_json?.asset_url || '';
+      img.draggable = false;
       el.appendChild(img);
       break;
     }
