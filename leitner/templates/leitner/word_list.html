@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="{% static 'leitner/css/leitner_base.css' %}">
   <style>
     .list-container { max-width: 1200px; margin: 4rem auto; padding: 0 4rem; }
-    .page-title { font-family: 'Cinzel'; font-size: 2.5rem; border-bottom: 2px solid var(--navy); padding-bottom: 1rem; margin-bottom: 2rem; }
+    .page-title { font-family: 'ClassyVogue'; font-size: 2.5rem; border-bottom: 2px solid var(--navy); padding-bottom: 1rem; margin-bottom: 2rem; }
     .search-bar { display: flex; gap: 0.75rem; margin-bottom: 2rem; }
     .search-bar input { flex: 1; padding: 0.8rem 1.2rem; border: 1px solid var(--line); font-size: 0.9rem; font-family: 'Inter', sans-serif; }
     .tabs { display: flex; gap: 2rem; margin-bottom: 2rem; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
@@ -18,7 +18,7 @@
     table { width: 100%; border-collapse: collapse; }
     th { text-align: left; padding: 1rem; font-size: 0.75rem; text-transform: uppercase; color: var(--gray); border-bottom: 1px solid var(--line); }
     td { padding: 1.2rem 1rem; border-bottom: 1px solid var(--line); font-size: 0.95rem; }
-    .word-col { font-weight: 700; font-family: 'Cinzel'; font-size: 1.1rem; }
+    .word-col { font-weight: 700; font-family: 'ClassyVogue'; font-size: 1.1rem; }
     .tag { font-size: 0.7rem; background: var(--line); padding: 0.2rem 0.5rem; margin-left: 0.4rem; color: var(--gray); }
     .box-badge { font-size: 0.75rem; padding: 0.2rem 0.6rem; font-weight: 600; background: var(--line); color: var(--navy); }
     .upload-section { margin-top: 4rem; padding: 2rem; border: 1px dashed var(--gray); text-align: center; }
@@ -113,6 +113,27 @@
       });
     });
   });
+  </script>
+  <script>
+  (async function() {
+    try {
+      const res = await fetch('/api/mainpage/fonts', { credentials: 'same-origin' });
+      const payload = await res.json();
+      if (!payload.ok || !Array.isArray(payload.data)) return;
+      for (const font of payload.data) {
+        if (!font.url) continue;
+        const id = 'bh-font-' + font.id;
+        if (document.getElementById(id)) continue;
+        const ff = String(font.font_family).replace(/['"\\]/g, '');
+        const url = String(font.url).replace(/['"\\]/g, '');
+        const fmt = font.format ? ` format('${String(font.format).replace(/['"\\]/g, '')}')` : '';
+        const style = document.createElement('style');
+        style.id = id;
+        style.textContent = `@font-face { font-family: '${ff}'; src: url('${url}')${fmt}; font-display: swap; }`;
+        document.head.appendChild(style);
+      }
+    } catch {}
+  })();
   </script>
 </body>
 </html>

@@ -15,8 +15,8 @@
       letter-spacing: 1px;
     }
     td { padding: 1.2rem 1rem; border-bottom: 1px solid var(--line); font-size: 0.9rem; }
-    .date-col { font-family: 'Cinzel'; font-size: 0.85rem; font-weight: 700; }
-    .num-col { font-family: 'Cinzel'; font-size: 1rem; }
+    .date-col { font-family: 'ClassyVogue'; font-size: 0.85rem; font-weight: 700; }
+    .num-col { font-family: 'ClassyVogue'; font-size: 1rem; }
     .correct-col { color: #166534; font-weight: 600; }
     .rate-pill {
       display: inline-block; font-size: 0.7rem; padding: 0.2rem 0.6rem;
@@ -94,5 +94,26 @@
     <p class="empty-state">아직 학습 기록이 없어요. 학습을 시작해보세요!</p>
     {% endif %}
   </div>
+  <script>
+  (async function() {
+    try {
+      const res = await fetch('/api/mainpage/fonts', { credentials: 'same-origin' });
+      const payload = await res.json();
+      if (!payload.ok || !Array.isArray(payload.data)) return;
+      for (const font of payload.data) {
+        if (!font.url) continue;
+        const id = 'bh-font-' + font.id;
+        if (document.getElementById(id)) continue;
+        const ff = String(font.font_family).replace(/['"\\]/g, '');
+        const url = String(font.url).replace(/['"\\]/g, '');
+        const fmt = font.format ? ` format('${String(font.format).replace(/['"\\]/g, '')}')` : '';
+        const style = document.createElement('style');
+        style.id = id;
+        style.textContent = `@font-face { font-family: '${ff}'; src: url('${url}')${fmt}; font-display: swap; }`;
+        document.head.appendChild(style);
+      }
+    } catch {}
+  })();
+  </script>
 </body>
 </html>

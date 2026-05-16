@@ -8,17 +8,17 @@
   <link rel="stylesheet" href="{% static 'leitner/css/leitner_base.css' %}">
   <style>
     .log-container { max-width: 900px; margin: 4rem auto; padding: 0 4rem; }
-    .page-title { font-family: 'Cinzel'; font-size: 2.5rem; border-bottom: 2px solid var(--navy); padding-bottom: 1rem; margin-bottom: 3rem; }
+    .page-title { font-family: 'ClassyVogue'; font-size: 2.5rem; border-bottom: 2px solid var(--navy); padding-bottom: 1rem; margin-bottom: 3rem; }
     .stat-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; margin-bottom: 4rem; }
     .stat-card { padding: 2rem; background: #fff; border: 1px solid var(--line); text-align: center; }
     .stat-card h4 { font-size: 0.7rem; color: var(--gray); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.75rem; }
-    .stat-card p { font-family: 'Cinzel'; font-size: 2rem; font-weight: 700; }
+    .stat-card p { font-family: 'ClassyVogue'; font-size: 2rem; font-weight: 700; }
     .log-entry { display: flex; align-items: center; padding: 1.5rem 0; border-bottom: 1px solid var(--line); }
     .log-date { width: 130px; font-size: 0.8rem; color: var(--gray); }
     .log-status { width: 50px; font-weight: 700; font-size: 1.3rem; }
     .status-o { color: var(--blue); }
     .status-x { color: #991B1B; }
-    .log-word { flex: 1; font-family: 'Cinzel'; font-weight: 700; font-size: 1.05rem; }
+    .log-word { flex: 1; font-family: 'ClassyVogue'; font-weight: 700; font-size: 1.05rem; }
     .log-change { font-size: 0.8rem; color: var(--gray); }
     .empty-log { color: var(--gray); text-align: center; padding: 3rem 0; }
   </style>
@@ -68,5 +68,26 @@
     <p class="empty-log">아직 학습 기록이 없어요. 학습을 시작해보세요!</p>
     {% endif %}
   </div>
+  <script>
+  (async function() {
+    try {
+      const res = await fetch('/api/mainpage/fonts', { credentials: 'same-origin' });
+      const payload = await res.json();
+      if (!payload.ok || !Array.isArray(payload.data)) return;
+      for (const font of payload.data) {
+        if (!font.url) continue;
+        const id = 'bh-font-' + font.id;
+        if (document.getElementById(id)) continue;
+        const ff = String(font.font_family).replace(/['"\\]/g, '');
+        const url = String(font.url).replace(/['"\\]/g, '');
+        const fmt = font.format ? ` format('${String(font.format).replace(/['"\\]/g, '')}')` : '';
+        const style = document.createElement('style');
+        style.id = id;
+        style.textContent = `@font-face { font-family: '${ff}'; src: url('${url}')${fmt}; font-display: swap; }`;
+        document.head.appendChild(style);
+      }
+    } catch {}
+  })();
+  </script>
 </body>
 </html>

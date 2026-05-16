@@ -13,11 +13,11 @@
       text-transform: uppercase; margin-bottom: 1.5rem;
     }
     .hero-title {
-      font-family: 'Cinzel'; font-size: 4rem; letter-spacing: -1px;
+      font-family: 'ClassyVogue'; font-size: 4rem; letter-spacing: -1px;
       line-height: 1; margin-bottom: 0.75rem;
     }
     .hero-sub {
-      font-family: 'Noto Serif KR'; font-size: 1rem; font-weight: 300;
+      font-family: 'Noto Sans KR'; font-size: 1rem; font-weight: 300;
       color: var(--gray); margin-bottom: 4rem;
     }
     .summary-grid {
@@ -33,7 +33,7 @@
       letter-spacing: 1px; margin-bottom: 0.4rem;
     }
     .summary-card .s-value {
-      font-family: 'Cinzel'; font-size: 1.6rem; font-weight: 700;
+      font-family: 'ClassyVogue'; font-size: 1.6rem; font-weight: 700;
     }
     .summary-card .s-sub { font-size: 0.8rem; color: var(--rose); margin-top: 0.2rem; }
     .action-row { display: flex; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
@@ -45,7 +45,7 @@
     .action-btn:hover { border-color: var(--accent); background: #fdf8f6; }
     .action-btn .a-icon { font-size: 2rem; margin-bottom: 0.75rem; }
     .action-btn .a-title {
-      font-family: 'Cinzel'; font-size: 0.95rem; letter-spacing: 2px;
+      font-family: 'ClassyVogue'; font-size: 0.95rem; letter-spacing: 2px;
       text-transform: uppercase; margin-bottom: 0.3rem;
     }
     .action-btn .a-desc { font-size: 0.75rem; color: var(--gray); letter-spacing: 0.5px; }
@@ -106,6 +106,47 @@
         <span class="a-desc">학습 통계</span>
       </a>
     </div>
+
+    <div style="margin-top:4rem; padding-top:2rem; border-top:1px solid var(--line);">
+      {% if messages %}
+        {% for message in messages %}
+          <div style="margin-bottom:1rem; padding:0.75rem 1rem; font-size:0.85rem;
+            {% if 'error' in message.tags %}background:#FEF2F2;border:1px solid #FECACA;color:#991B1B;
+            {% else %}background:#EFF6FF;border:1px solid #BFDBFE;color:#1D4ED8;{% endif %}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+      <form method="post" action="{% url 'phrases:upload_csv' %}"
+            enctype="multipart/form-data"
+            style="display:inline-flex; align-items:center; gap:1rem; flex-wrap:wrap;">
+        {% csrf_token %}
+        <span style="font-size:0.8rem; color:var(--gray);">CSV 파일로 카드 추가</span>
+        <input type="file" name="csv_file" accept=".csv" required style="font-size:0.8rem;">
+        <button type="submit" class="btn btn-primary" style="padding:0.7rem 1.5rem; font-size:0.7rem;">Upload CSV</button>
+      </form>
+    </div>
   </div>
+  <script>
+  (async function() {
+    try {
+      const res = await fetch('/api/mainpage/fonts', { credentials: 'same-origin' });
+      const payload = await res.json();
+      if (!payload.ok || !Array.isArray(payload.data)) return;
+      for (const font of payload.data) {
+        if (!font.url) continue;
+        const id = 'bh-font-' + font.id;
+        if (document.getElementById(id)) continue;
+        const ff = String(font.font_family).replace(/['"\\]/g, '');
+        const url = String(font.url).replace(/['"\\]/g, '');
+        const fmt = font.format ? ` format('${String(font.format).replace(/['"\\]/g, '')}')` : '';
+        const style = document.createElement('style');
+        style.id = id;
+        style.textContent = `@font-face { font-family: '${ff}'; src: url('${url}')${fmt}; font-display: swap; }`;
+        document.head.appendChild(style);
+      }
+    } catch {}
+  })();
+  </script>
 </body>
 </html>
