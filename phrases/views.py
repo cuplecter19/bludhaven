@@ -218,8 +218,6 @@ def api_stats(request):
 # CSV upload view
 # ---------------------------------------------------------------------------
 
-_BLANK_RE = re.compile(r'\[([^\]/]+)(?:/([^\]]*))?\]')
-
 REQUIRED_COLUMNS = {'sentence_en', 'sentence_ko', 'phrase', 'phrase_ko', 'difficulty', 'tags'}
 
 
