@@ -4,7 +4,9 @@
   top: 16px;
   width: 340px;
   max-height: calc(100vh - 32px);
-  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   z-index: 99999;
   background: rgba(7, 10, 18, 0.96);
   border: 1px solid rgba(100, 160, 255, 0.45);
@@ -21,6 +23,36 @@
   padding: 10px 12px;
   border-bottom: 1px solid rgba(120, 170, 255, 0.3);
   font-weight: 700;
+  flex-shrink: 0;
+}
+
+.editor-panel__resize-handle {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 6px;
+  cursor: ns-resize;
+  z-index: 1;
+}
+
+.editor-panel__resize-handle--top {
+  top: 0;
+  border-radius: 8px 8px 0 0;
+}
+
+.editor-panel__resize-handle--bottom {
+  bottom: 0;
+  border-radius: 0 0 8px 8px;
+}
+
+.editor-panel__resize-handle:hover {
+  background: rgba(92, 178, 255, 0.25);
+}
+
+.editor-panel__body {
+  flex: 1 1 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .editor-panel__section {

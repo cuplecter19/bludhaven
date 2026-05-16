@@ -1,4 +1,4 @@
-import { uploadAsset } from './asset-uploader.js';
+import { uploadAsset, uploadAssetFromUrl } from './asset-uploader.js';
 
 const TEXT_STYLE_LAYER_TYPES = new Set(['text', 'bg_text', 'menu_button', 'clock', 'user_profile']);
 const IMAGE_ASSET_LAYER_TYPES = new Set([
@@ -226,6 +226,54 @@ export function initEditorPanel({ store, root, render, onStickerToggle }) {
       window.addEventListener('pointerup', onUp, { once: true });
     });
   }
+
+  function bindPanelResize() {
+    const MIN_HEIGHT = 500;
+
+    function getMaxHeight() {
+      return window.innerHeight - 32;
+    }
+
+    function startResize(e, fromTop) {
+      e.preventDefault();
+      const startY = e.clientY;
+      const rect = panel.getBoundingClientRect();
+      const startHeight = rect.height;
+      const startTop = rect.top;
+
+      // Switch from max-height to explicit height so resize is smooth
+      const prevMaxHeight = panel.style.maxHeight;
+      panel.style.height = `${startHeight}px`;
+      panel.style.maxHeight = 'none';
+
+      const onMove = (ev) => {
+        const delta = ev.clientY - startY;
+        if (fromTop) {
+          const newHeight = Math.min(getMaxHeight(), Math.max(MIN_HEIGHT, startHeight - delta));
+          const newTop = startTop + (startHeight - newHeight);
+          panel.style.height = `${newHeight}px`;
+          panel.style.top = `${newTop}px`;
+        } else {
+          const newHeight = Math.min(getMaxHeight(), Math.max(MIN_HEIGHT, startHeight + delta));
+          panel.style.height = `${newHeight}px`;
+        }
+      };
+      const onUp = () => {
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+        // Keep the user-set height but restore max-height constraint
+        panel.style.maxHeight = prevMaxHeight;
+      };
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp, { once: true });
+    }
+
+    const topHandle = document.getElementById('editor-panel-resize-top');
+    const bottomHandle = document.getElementById('editor-panel-resize-bottom');
+    if (topHandle) topHandle.addEventListener('pointerdown', (e) => startResize(e, true));
+    if (bottomHandle) bottomHandle.addEventListener('pointerdown', (e) => startResize(e, false));
+  }
+
 
   function injectFontFace(font) {
     if (!font.url) return;
@@ -577,6 +625,30 @@ export function initEditorPanel({ store, root, render, onStickerToggle }) {
     render();
   });
 
+  document.getElementById('asset-url-upload-btn').addEventListener('click', async () => {
+    clearError();
+    const urlInput = document.getElementById('asset-url-input');
+    const kind = document.getElementById('asset-kind-select').value;
+    const url = urlInput.value.trim();
+    if (!url) return showError('이미지 URL을 입력하세요');
+
+    const res = await uploadAssetFromUrl(url, kind);
+    if (!res.ok) return showError(`${res.error_code || 'UPLOAD'}: ${res.error}`);
+
+    delete assetCache[kind];
+    if (currentAssetKind === kind) loadAssets(kind);
+
+    const layer = getSelectedLayer();
+    if (!layer) return;
+
+    const patch = { settings_json: { ...(layer.settings_json || {}), asset_url: res.data.variants.full_webp || '' } };
+    const updated = await api(`/api/editor/layers/${layer.id}`, { method: 'PATCH', body: patch });
+    if (!updated.ok) return showError(updated.error || 'asset patch failed');
+    store.patchLayer(layer.id, updated.data, { recordUndo: true, markDirty: true });
+    render();
+  });
+
+
   for (const tab of assetTabs) {
     tab.addEventListener('click', () => {
       assetTabs.forEach((item) => item.classList.remove('is-active'));
@@ -627,6 +699,7 @@ export function initEditorPanel({ store, root, render, onStickerToggle }) {
   loadAssets(currentAssetKind);
   loadFonts();
   bindPanelDrag();
+  bindPanelResize();
   refreshScenes().catch((error) => showError(error.message));
 
   return {
