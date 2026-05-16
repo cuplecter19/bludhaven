@@ -5,9 +5,9 @@
     --bg: #F9F9FB;
     --line: #E2E8F0;
     --text-muted: #64748B;
-    --font-serif: 'Cinzel', serif;
+    --font-serif: 'ClassyVogue', serif;
     --font-sans: 'Inter', sans-serif;
-    --font-ko: 'Noto Serif KR', serif;
+    --font-ko: 'Noto Sans KR', serif;
 }
 
 body {
@@ -34,14 +34,14 @@ body {
     display: flex;
     justify-content: space-between;
     font-family: var(--font-serif);
-    font-size: 0.8rem;
+    font-size: 1rem;
     letter-spacing: 2px;
     padding-bottom: 1rem;
 }
 
 .shop-masthead {
-    font-family: var(--font-serif);
-    font-size: 5rem;
+    font-family: var(--font-ko), var(--font-serif);
+    font-size: 4rem;
     line-height: 0.85;
     font-weight: 900;
     text-align: center;
@@ -50,6 +50,7 @@ body {
 }
 
 .sub-mast {
+    font-family: var(--font-serif);
     font-size: 1.5rem;
     letter-spacing: 12px;
     color: var(--blue);
@@ -174,13 +175,13 @@ body {
 }
 
 .item-name {
-    font-family: var(--font-serif);
+    font-family: var(--font-ko), var(--font-serif);
     font-size: 1.2rem;
     margin-bottom: 0.5rem;
 }
 
 .item-desc {
-    font-family: var(--font-ko);
+    font-family: var(--font-ko), var(--font-serif);
     font-size: 0.85rem;
     color: var(--text-muted);
     margin-bottom: 1.5rem;
