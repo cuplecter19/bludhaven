@@ -104,7 +104,7 @@
     }
 
     currentCard = data.cards[0];
-    scrambledWords = currentCard.scramble_data.shuffled_words || [];
+    scrambledWords = currentCard.scramble_data.shuffled || [];
     startTime = Date.now();
 
     const tags = currentCard.tags.map(t => `<span class="tag" style="background:var(--line);padding:0.2rem 0.5rem;font-size:0.7rem;color:var(--gray);">${t.name}</span>`).join('');
@@ -162,9 +162,12 @@
 
     document.getElementById('action-btns').style.display = 'none';
     const el = document.getElementById('result-area');
-    el.innerHTML = data.is_correct
-      ? '<div class="result-correct">✓ 정답입니다!</div>'
-      : '<div class="result-wrong">✗ 오답입니다.</div>';
+    if (data.is_correct) {
+      const pts = data.points_earned ? ` (+${data.points_earned} pts)` : '';
+      el.innerHTML = `<div class="result-correct">✓ 정답입니다!${pts}</div>`;
+    } else {
+      el.innerHTML = '<div class="result-wrong">✗ 오답입니다.</div>';
+    }
 
     const rev = document.getElementById('answer-reveal');
     rev.innerHTML = `<div class="phrase">${data.correct_order.join(' ')}</div>`;

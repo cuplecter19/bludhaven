@@ -53,6 +53,10 @@ def update_daily_summary(user, mode, result):
     return summary
 
 
+POINTS_CLOZE_CORRECT = 10
+POINTS_SCRAMBLE_CORRECT = 15
+
+
 def process_review(card, result, mode, response_ms=None):
     """
     Process a review result for a PhraseCard.
@@ -97,6 +101,17 @@ def process_review(card, result, mode, response_ms=None):
 
     update_daily_summary(card.user, mode, result)
 
+    # Award points for correct answers
+    points_earned = 0
+    if result in (ReviewLog.RESULT_GOOD, ReviewLog.RESULT_EASY):
+        if mode == ReviewLog.MODE_CLOZE:
+            points_earned = POINTS_CLOZE_CORRECT
+        elif mode == ReviewLog.MODE_SCRAMBLE:
+            points_earned = POINTS_SCRAMBLE_CORRECT
+        if points_earned:
+            card.user.points += points_earned
+            card.user.save(update_fields=['points'])
+
     return {
         'card_state': {
             'box_number': card.box_number,
@@ -105,4 +120,5 @@ def process_review(card, result, mode, response_ms=None):
             'review_count': card.review_count,
         },
         'offer_scramble': should_offer_scramble(card),
+        'points_earned': points_earned,
     }
