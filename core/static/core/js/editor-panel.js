@@ -242,6 +242,7 @@ export function initEditorPanel({ store, root, render, onStickerToggle }) {
       const startTop = rect.top;
 
       // Switch from max-height to explicit height so resize is smooth
+      const prevMaxHeight = panel.style.maxHeight;
       panel.style.height = `${startHeight}px`;
       panel.style.maxHeight = 'none';
 
@@ -260,6 +261,8 @@ export function initEditorPanel({ store, root, render, onStickerToggle }) {
       const onUp = () => {
         window.removeEventListener('pointermove', onMove);
         window.removeEventListener('pointerup', onUp);
+        // Keep the user-set height but restore max-height constraint
+        panel.style.maxHeight = prevMaxHeight;
       };
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onUp, { once: true });
@@ -272,6 +275,7 @@ export function initEditorPanel({ store, root, render, onStickerToggle }) {
   }
 
 
+  function injectFontFace(font) {
     if (!font.url) return;
     const id = `bh-font-${font.id}`;
     if (document.getElementById(id)) return;
@@ -645,6 +649,7 @@ export function initEditorPanel({ store, root, render, onStickerToggle }) {
   });
 
 
+  for (const tab of assetTabs) {
     tab.addEventListener('click', () => {
       assetTabs.forEach((item) => item.classList.remove('is-active'));
       tab.classList.add('is-active');
