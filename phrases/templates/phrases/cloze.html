@@ -68,7 +68,8 @@
 
     <div class="btn-group">
       <button class="btn btn-primary" id="checkBtn" style="display:none;" onclick="checkAnswer()">확인</button>
-      <button class="btn btn-correct" id="nextBtn" style="display:none;" onclick="loadNextCard()">다음 카드 →</button>
+      <button class="btn btn-correct" id="nextBtnCorrect" style="display:none;" onclick="loadNextCard()">다음 카드 →</button>
+      <button class="btn btn-wrong" id="nextBtnWrong" style="display:none;" onclick="loadNextCard()">다음 카드 →</button>
     </div>
   </div>
 
@@ -78,7 +79,8 @@
 
   async function loadNextCard() {
     document.getElementById('result-area').innerHTML = '';
-    document.getElementById('nextBtn').style.display = 'none';
+    document.getElementById('nextBtnCorrect').style.display = 'none';
+    document.getElementById('nextBtnWrong').style.display = 'none';
     document.getElementById('checkBtn').style.display = 'none';
     window._startTime = Date.now();
 
@@ -123,22 +125,35 @@
 
     const responseMs = Date.now() - window._startTime;
 
-    const res = await fetch("{% url 'phrases:api_review' %}", {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
-      body: JSON.stringify({ card_id: currentCard.id, result: 'good', response_ms: responseMs }),
-    });
-    const data = await res.json();
-
     const correct = currentCard.phrase;
     const isMatch = userAnswer.toLowerCase() === correct.toLowerCase();
+    const result = isMatch ? 'good' : 'again';
+
+    let data = {};
+    try {
+      const res = await fetch("{% url 'phrases:api_review' %}", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify({ card_id: currentCard.id, result: result, response_ms: responseMs }),
+      });
+      data = await res.json();
+    } catch (e) {
+      document.getElementById('result-area').innerHTML =
+        '<div class="result-wrong">서버 오류가 발생했습니다. 다시 시도해 주세요.</div>';
+      return;
+    }
+
     const el = document.getElementById('result-area');
-    el.innerHTML = isMatch
-      ? `<div class="result-correct">✓ 정답입니다!</div><div class="phrase-hero">${correct}</div>`
-      : `<div class="result-wrong">✗ 오답 — 정답: <strong>${correct}</strong></div>`;
+    if (isMatch) {
+      const pts = data.points_earned ? ` (+${data.points_earned} pts)` : '';
+      el.innerHTML = `<div class="result-correct">✓ 정답입니다!${pts}</div><div class="phrase-hero">${correct}</div>`;
+      document.getElementById('nextBtnCorrect').style.display = 'inline-block';
+    } else {
+      el.innerHTML = `<div class="result-wrong">✗ 오답 — 정답: <strong>${correct}</strong></div>`;
+      document.getElementById('nextBtnWrong').style.display = 'inline-block';
+    }
 
     document.getElementById('checkBtn').style.display = 'none';
-    document.getElementById('nextBtn').style.display = 'inline-block';
   }
 
   loadNextCard();
