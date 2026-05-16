@@ -79,6 +79,9 @@ export function initEditorPanel({ store, root, render, onStickerToggle }) {
   const toggleItalic = document.getElementById('toggle-italic');
   const toggleUnderline = document.getElementById('toggle-underline');
   const toggleStrikethrough = document.getElementById('toggle-strikethrough');
+  const toggleAlignLeft = document.getElementById('toggle-align-left');
+  const toggleAlignCenter = document.getElementById('toggle-align-center');
+  const toggleAlignRight = document.getElementById('toggle-align-right');
   let currentAssetKind = 'background';
   let assetCache = {};
 
@@ -146,6 +149,13 @@ export function initEditorPanel({ store, root, render, onStickerToggle }) {
 
     const textColor = s.text_color || s.color || '#ffffff';
     const borderColor = s.border_color || '#000000';
+    const bgColor = s.bg_color || '';
+    document.getElementById('prop-bg-color-text').value = bgColor;
+    if (bgColor) document.getElementById('prop-bg-color').value = normalizeHexColor(bgColor, '#ffffff');
+    const bgOpacity = s.bg_color_opacity ?? 1;
+    document.getElementById('prop-bg-opacity').value      = bgOpacity;
+    document.getElementById('prop-bg-opacity-text').value = bgOpacity;
+
     document.getElementById('prop-text-color').value = normalizeHexColor(textColor, '#ffffff');
     document.getElementById('prop-text-color-text').value = textColor;
     document.getElementById('prop-border-width').value = s.border_width ?? 0;
@@ -158,6 +168,12 @@ export function initEditorPanel({ store, root, render, onStickerToggle }) {
     setToggleState(toggleItalic, s.font_style === 'italic');
     setToggleState(toggleUnderline, s.text_decoration === 'underline');
     setToggleState(toggleStrikethrough, s.text_decoration === 'line-through');
+
+    const align = s.text_align || 'left';
+    setToggleState(toggleAlignLeft,   align === 'left');
+    setToggleState(toggleAlignCenter, align === 'center');
+    setToggleState(toggleAlignRight,  align === 'right');
+    
     refreshSectionVisibility(layer);
   }
 
@@ -400,6 +416,15 @@ export function initEditorPanel({ store, root, render, onStickerToggle }) {
 
   bindColorPair('prop-text-color', 'prop-text-color-text', '#ffffff');
   bindColorPair('prop-border-color', 'prop-border-color-text', '#000000');
+  bindColorPair('prop-bg-color', 'prop-bg-color-text', '#ffffff');
+
+  const bgOpacityRange = document.getElementById('prop-bg-opacity');
+  const bgOpacityText  = document.getElementById('prop-bg-opacity-text');
+  bgOpacityRange.addEventListener('input', () => { bgOpacityText.value = bgOpacityRange.value; });
+  bgOpacityText.addEventListener('input', () => {
+    const v = Math.min(1, Math.max(0, parseFloat(bgOpacityText.value) || 0));
+    bgOpacityRange.value = v;
+  });
 
   toggleItalic.addEventListener('click', () => setToggleState(toggleItalic, !toggleItalic.classList.contains('is-active')));
   toggleUnderline.addEventListener('click', () => {
@@ -412,6 +437,16 @@ export function initEditorPanel({ store, root, render, onStickerToggle }) {
     setToggleState(toggleStrikethrough, nextState);
     if (nextState) setToggleState(toggleUnderline, false);
   });
+
+  function setAlign(align) {
+  setToggleState(toggleAlignLeft,   align === 'left');
+  setToggleState(toggleAlignCenter, align === 'center');
+  setToggleState(toggleAlignRight,  align === 'right');
+}
+
+  toggleAlignLeft.addEventListener('click',   () => setAlign('left'));
+  toggleAlignCenter.addEventListener('click', () => setAlign('center'));
+  toggleAlignRight.addEventListener('click',  () => setAlign('right'));
 
   store.subscribe((state) => {
     refreshLayerList(state);
@@ -473,11 +508,16 @@ export function initEditorPanel({ store, root, render, onStickerToggle }) {
       font_weight: document.getElementById('prop-font-weight').value || '',
       font_style: toggleItalic.classList.contains('is-active') ? 'italic' : 'normal',
       text_decoration: textDecoration,
+      text_align: toggleAlignCenter.classList.contains('is-active') ? 'center'
+          : toggleAlignRight.classList.contains('is-active')  ? 'right'
+          : 'left',
       size_mode: document.getElementById('prop-size-mode').value || 'font',
       font_size: document.getElementById('prop-font-size').value,
       letter_spacing: document.getElementById('prop-letter-spacing').value,
       line_height: document.getElementById('prop-line-height').value,
       text_color: document.getElementById('prop-text-color-text').value,
+      bg_color: document.getElementById('prop-bg-color-text').value || '',
+      bg_color_opacity: parseFloat(document.getElementById('prop-bg-opacity').value) ?? 1,
       border_width: Number(document.getElementById('prop-border-width').value || 0),
       border_style: document.getElementById('prop-border-style').value || 'solid',
       border_color: document.getElementById('prop-border-color-text').value,

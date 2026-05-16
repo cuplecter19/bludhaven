@@ -1,3 +1,14 @@
+function hexToRgba(hex, opacity) {
+  const clean = hex.replace('#', '');
+  const full  = clean.length === 3
+    ? clean.split('').map(c => c + c).join('')
+    : clean;
+  const r = parseInt(full.slice(0, 2), 16);
+  const g = parseInt(full.slice(2, 4), 16);
+  const b = parseInt(full.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+}
+
 export function createMenuButtonLayer(layer) {
   const settings = layer.settings_json || {};
   const link = document.createElement('a');
@@ -5,7 +16,14 @@ export function createMenuButtonLayer(layer) {
   link.target = settings.target || '_self';
   link.textContent = settings.label || settings.text || 'MENU';
   link.setAttribute('aria-label', settings.aria_label || settings.label || settings.text || 'menu button');
-  link.style.background = 'none';
+  
+  link.classList.add('bh-menu-link');
+  if (settings.bg_color) {
+    const opacity = settings.bg_color_opacity ?? 1;
+    const highlight = hexToRgba(settings.bg_color, opacity);
+    link.style.setProperty('--menu-highlight-color', highlight);
+  }
+
   link.style.border = 'none';
   link.style.padding = '0';
   link.style.margin = '0';

@@ -39,6 +39,8 @@ function applyTextLayerStyles(el, s = {}) {
   if (s.font_weight) el.style.fontWeight = String(s.font_weight);
   if (s.font_style) el.style.fontStyle = s.font_style;
   if (s.text_decoration) el.style.textDecoration = s.text_decoration;
+  if (s.text_align)     el.style.textAlign      = s.text_align;
+  if (s.bg_color)        el.style.backgroundColor = s.bg_color;
   if (textColor) el.style.color = textColor;
   if (s.font_size && s.size_mode !== 'box') el.style.fontSize = s.font_size;
   if (s.letter_spacing) el.style.letterSpacing = s.letter_spacing;

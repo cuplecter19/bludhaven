@@ -145,6 +145,12 @@
                         <button id="toggle-underline" type="button">Underline</button>
                         <button id="toggle-strikethrough" type="button">Strike</button>
                     </div>
+                    <label>Align</label>
+                    <div class="toggle-row">
+                        <button id="toggle-align-left"   type="button" title="왼쪽 정렬">◀ Left</button>
+                        <button id="toggle-align-center" type="button" title="가운데 정렬">■ Center</button>
+                        <button id="toggle-align-right"  type="button" title="오른쪽 정렬">Right ▶</button>
+                    </div>
                     <label>Size Mode</label>
                     <select id="prop-size-mode">
                         <option value="font">font</option>
@@ -157,6 +163,16 @@
                     <div class="color-input-row">
                         <input id="prop-text-color" type="color">
                         <input id="prop-text-color-text" type="text" placeholder="#ffffff">
+                    </div>
+                    <label>BG Color</label>
+                    <div class="color-input-row">
+                        <input id="prop-bg-color" type="color" value="#ffffff">
+                        <input id="prop-bg-color-text" type="text" placeholder="transparent">
+                    </div>
+                    <label>BG Opacity</label>
+                    <div class="color-input-row">
+                        <input id="prop-bg-opacity" type="range" min="0" max="1" step="0.01" value="1" style="flex:1">
+                        <input id="prop-bg-opacity-text" type="number" min="0" max="1" step="0.01" value="1" style="width:52px">
                     </div>
                     <label>Border Width</label><input id="prop-border-width" type="number" step="1" min="0" max="50">
                     <label>Border Style</label>
