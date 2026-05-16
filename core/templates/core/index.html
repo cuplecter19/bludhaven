@@ -15,8 +15,9 @@
 
     {% if is_admin %}
     <aside id="editor-panel" class="editor-panel" hidden>
+        <div id="editor-panel-resize-top" class="editor-panel__resize-handle editor-panel__resize-handle--top"></div>
         <div id="editor-panel-handle" class="editor-panel__handle">EDITOR</div>
-
+        <div class="editor-panel__body">
         <div class="editor-panel__section">
             <label>Scene</label>
             <select id="scene-select"></select>
@@ -71,6 +72,8 @@
                 <option value="generic">generic</option>
             </select>
             <button id="asset-upload-btn" type="button">업로드</button>
+            <input type="text" id="asset-url-input" placeholder="외부 이미지 URL (http/https)">
+            <button id="asset-url-upload-btn" type="button">URL 업로드</button>
         </div>
 
         <div class="editor-panel__section" id="font-management-section">
@@ -187,6 +190,8 @@
         </div>
 
         <div id="editor-error" class="editor-error" hidden></div>
+        </div><!-- /.editor-panel__body -->
+        <div id="editor-panel-resize-bottom" class="editor-panel__resize-handle editor-panel__resize-handle--bottom"></div>
     </aside>
     {% endif %}
 

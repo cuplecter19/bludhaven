@@ -3,6 +3,8 @@ import io
 import logging
 import os
 import tempfile
+import urllib.parse
+import urllib.request
 import uuid
 
 from django.core.exceptions import ValidationError
@@ -270,6 +272,91 @@ def upload_asset(request):
     finally:
         if original_tmp_path:
             purge_original(original_tmp_path)
+
+    return Response(
+        {'ok': True, 'data': {'asset': serialize_asset(media), 'variants': variants_payload}},
+        status=status.HTTP_201_CREATED,
+    )
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def upload_asset_from_url(request):
+    url = (request.data.get('url') or '').strip()
+    kind = request.data.get('kind', 'generic')
+    if not url:
+        return bad_request('INVALID_REQUEST', 'url is required')
+
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in ('http', 'https'):
+        return bad_request('INVALID_REQUEST', 'url must use http or https')
+
+    max_bytes = 15 * 1024 * 1024
+    original_bytes = None
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            original_bytes = resp.read(max_bytes + 1)
+    except Exception as exc:
+        logger.warning('URL asset fetch failed for %s: %s', url, exc)
+        return bad_request('FETCH_FAILED', '')
+
+    if len(original_bytes) > max_bytes:
+        return bad_request('FILE_TOO_LARGE', '')
+
+    filename = os.path.basename(parsed.path) or 'image'
+    try:
+        validate_file_magic_bytes(original_bytes, filename, '')
+    except ValueError:
+        return bad_request('UNSUPPORTED_FORMAT', '')
+
+    variants_payload = {}
+    try:
+        image = Image.open(io.BytesIO(original_bytes))
+        image = ImageOps.exif_transpose(image)
+        if image.mode not in ('RGB', 'RGBA'):
+            image = image.convert('RGBA')
+
+        hash_sha = hashlib.sha256(original_bytes).hexdigest()
+        variants = generate_variants(image)
+
+        base_key = f"core/assets/{timezone.now().strftime('%Y/%m/%d')}/{uuid.uuid4().hex}"
+        saved_paths = {}
+        for name, variant in variants.items():
+            webp_bytes = transcode_to_webp(variant, quality=82)
+            webp_path = default_storage.save(f'{base_key}_{name}.webp', ContentFile(webp_bytes))
+            saved_paths[f'{name}_webp'] = webp_path
+            try:
+                avif_bytes = transcode_to_avif(variant, quality=48)
+                avif_path = default_storage.save(f'{base_key}_{name}.avif', ContentFile(avif_bytes))
+                saved_paths[f'{name}_avif'] = avif_path
+            except Exception as avif_exc:
+                logger.warning(
+                    'AVIF transcode failed for variant=%s url=%s: %s',
+                    name, url, avif_exc,
+                )
+
+        media = MediaAsset.objects.create(
+            kind=kind,
+            mime_type='image/webp',
+            storage_path=saved_paths.get('full_webp') or next(iter(saved_paths.values())),
+            width=image.width,
+            height=image.height,
+            bytes=len(original_bytes),
+            hash_sha256=hash_sha,
+            original_deleted_at=timezone.now(),
+        )
+        variants_payload = {
+            k: default_storage.url(v) for k, v in saved_paths.items()
+        }
+    except UnidentifiedImageError:
+        return bad_request('UNSUPPORTED_FORMAT', '')
+    except OSError as os_exc:
+        logger.error('Image transcode failed for url %s: %s', url, os_exc)
+        return bad_request('TRANSCODE_FAILED', '')
+    except Exception as exc:
+        logger.error('Asset URL upload failed for %s: %s', url, exc)
+        return bad_request('UPLOAD_FAILED', '')
 
     return Response(
         {'ok': True, 'data': {'asset': serialize_asset(media), 'variants': variants_payload}},
@@ -629,6 +716,7 @@ def bad_request(error_code, message):
         'UNSUPPORTED_FORMAT': 'Unsupported image format',
         'TRANSCODE_FAILED': 'Image transcode failed',
         'UPLOAD_FAILED': 'Asset upload failed',
+        'FETCH_FAILED': 'Failed to fetch image from URL',
         'RESTORE_FAILED': 'Revision restore failed',
     }
     return Response(
