@@ -1,7 +1,9 @@
 import hashlib
 import io
+import ipaddress
 import logging
 import os
+import socket
 import tempfile
 import urllib.parse
 import urllib.request
@@ -291,11 +293,30 @@ def upload_asset_from_url(request):
     if parsed.scheme not in ('http', 'https'):
         return bad_request('INVALID_REQUEST', 'url must use http or https')
 
+    # Block SSRF: resolve hostname and reject private/loopback addresses
+    hostname = parsed.hostname or ''
+    if not hostname:
+        return bad_request('INVALID_REQUEST', 'url must use http or https')
+    try:
+        addr_infos = socket.getaddrinfo(hostname, None)
+        for _, _, _, _, sockaddr in addr_infos:
+            ip = ipaddress.ip_address(sockaddr[0])
+            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+                return bad_request('INVALID_REQUEST', 'url resolves to a private or reserved address')
+    except OSError:
+        return bad_request('FETCH_FAILED', '')
+
     max_bytes = 15 * 1024 * 1024
     original_bytes = None
     try:
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        req = urllib.request.Request(
+            url,
+            headers={'User-Agent': 'bludhaven-asset-uploader/1.0'},
+        )
         with urllib.request.urlopen(req, timeout=15) as resp:
+            content_type = (resp.headers.get('Content-Type') or '').split(';')[0].strip()
+            if content_type and content_type not in ALLOWED_MIME_TYPES:
+                return bad_request('UNSUPPORTED_FORMAT', '')
             original_bytes = resp.read(max_bytes + 1)
     except Exception as exc:
         logger.warning('URL asset fetch failed for %s: %s', url, exc)
