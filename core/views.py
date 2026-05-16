@@ -293,18 +293,9 @@ def upload_asset_from_url(request):
     if parsed.scheme not in ('http', 'https'):
         return bad_request('INVALID_REQUEST', 'url must use http or https')
 
-    # Block SSRF: resolve hostname and reject private/loopback addresses
     hostname = parsed.hostname or ''
     if not hostname:
-        return bad_request('INVALID_REQUEST', 'url must use http or https')
-    try:
-        addr_infos = socket.getaddrinfo(hostname, None)
-        for _, _, _, _, sockaddr in addr_infos:
-            ip = ipaddress.ip_address(sockaddr[0])
-            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
-                return bad_request('INVALID_REQUEST', 'url resolves to a private or reserved address')
-    except OSError:
-        return bad_request('FETCH_FAILED', '')
+        return bad_request('INVALID_REQUEST', 'url must include a valid hostname')
 
     max_bytes = 15 * 1024 * 1024
     original_bytes = None
@@ -313,7 +304,7 @@ def upload_asset_from_url(request):
             url,
             headers={'User-Agent': 'bludhaven-asset-uploader/1.0'},
         )
-        with urllib.request.urlopen(req, timeout=15) as resp:
+        with _SAFE_URL_OPENER.open(req, timeout=15) as resp:
             content_type = (resp.headers.get('Content-Type') or '').split(';')[0].strip()
             if content_type and content_type not in ALLOWED_MIME_TYPES:
                 return bad_request('UNSUPPORTED_FORMAT', '')
@@ -836,3 +827,49 @@ def purge_original(temp_path):
         os.remove(temp_path)
     except FileNotFoundError:
         pass
+
+
+def _is_restricted_ip(addr_str):
+    """Return True if the IP address is private, loopback, link-local, reserved or multicast."""
+    try:
+        ip = ipaddress.ip_address(addr_str)
+        return ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast
+    except ValueError:
+        return True
+
+
+class _SafeHTTPHandler(urllib.request.HTTPHandler):
+    """HTTP handler that blocks connections to restricted IP ranges."""
+
+    def http_open(self, req):
+        host = req.host.split(':')[0]
+        addr_infos = socket.getaddrinfo(host, None)
+        for _, _, _, _, sockaddr in addr_infos:
+            if _is_restricted_ip(sockaddr[0]):
+                raise ValueError(f'Connection to restricted address blocked: {sockaddr[0]}')
+        return super().http_open(req)
+
+
+class _SafeHTTPSHandler(urllib.request.HTTPSHandler):
+    """HTTPS handler that blocks connections to restricted IP ranges."""
+
+    def https_open(self, req):
+        host = req.host.split(':')[0]
+        addr_infos = socket.getaddrinfo(host, None)
+        for _, _, _, _, sockaddr in addr_infos:
+            if _is_restricted_ip(sockaddr[0]):
+                raise ValueError(f'Connection to restricted address blocked: {sockaddr[0]}')
+        return super().https_open(req)
+
+
+_SAFE_URL_OPENER = urllib.request.OpenerDirector()
+_SAFE_URL_OPENER.addheaders = []
+for _handler in (
+    urllib.request.UnknownHandler(),
+    _SafeHTTPHandler(),
+    _SafeHTTPSHandler(),
+    urllib.request.HTTPDefaultErrorHandler(),
+    urllib.request.HTTPRedirectHandler(),
+    urllib.request.HTTPErrorProcessor(),
+):
+    _SAFE_URL_OPENER.add_handler(_handler)
