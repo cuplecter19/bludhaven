@@ -108,9 +108,9 @@ def process_review(card, result, mode, response_ms=None):
             points_earned = POINTS_CLOZE_CORRECT
         elif mode == ReviewLog.MODE_SCRAMBLE:
             points_earned = POINTS_SCRAMBLE_CORRECT
-        if points_earned:
-            card.user.points += points_earned
-            card.user.save(update_fields=['points'])
+    if points_earned:
+        card.user.points += points_earned
+        card.user.save(update_fields=['points'])
 
     return {
         'card_state': {

@@ -129,12 +129,19 @@
     const isMatch = userAnswer.toLowerCase() === correct.toLowerCase();
     const result = isMatch ? 'good' : 'again';
 
-    const res = await fetch("{% url 'phrases:api_review' %}", {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
-      body: JSON.stringify({ card_id: currentCard.id, result: result, response_ms: responseMs }),
-    });
-    const data = await res.json();
+    let data = {};
+    try {
+      const res = await fetch("{% url 'phrases:api_review' %}", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify({ card_id: currentCard.id, result: result, response_ms: responseMs }),
+      });
+      data = await res.json();
+    } catch (e) {
+      document.getElementById('result-area').innerHTML =
+        '<div class="result-wrong">서버 오류가 발생했습니다. 다시 시도해 주세요.</div>';
+      return;
+    }
 
     const el = document.getElementById('result-area');
     if (isMatch) {
