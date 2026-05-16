@@ -31,15 +31,16 @@ export async function createUserProfileWidget(layer) {
 
   const imgLink = document.createElement('a');
   imgLink.href = '/accounts/profile/update/';
-  imgLink.style.cssText = 'display:block;width:64px;height:64px;border-radius:50%;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.08);cursor:pointer;text-decoration:none;';
+  imgLink.style.cssText = 'display:block;width:64px;height:64px;border-radius:50%;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.08);cursor:pointer;text-decoration:none;pointer-events:auto;';
   imgLink.title = '프로필 수정';
   imgLink.setAttribute('aria-label', '프로필 수정');
   const imgWrapper = imgLink;
   if (profileData.profile_image_url) {
     const img = document.createElement('img');
-    img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+    img.style.cssText = 'width:100%;height:100%;object-fit:cover;user-select:none;';
     img.src = profileData.profile_image_url;
     img.alt = profileData.nickname;
+    img.draggable = false;
     imgWrapper.appendChild(img);
   } else {
     imgWrapper.textContent = '👤';
@@ -48,10 +49,12 @@ export async function createUserProfileWidget(layer) {
   const nick = document.createElement('div');
   nick.className = 'user-profile-widget__nickname';
   nick.textContent = profileData.nickname;
+  nick.style.userSelect = 'none';
 
   const pts = document.createElement('div');
   pts.className = 'user-profile-widget__points';
   pts.textContent = `${profileData.points.toLocaleString('ko-KR')} pts`;
+  pts.style.userSelect = 'none';
 
   wrapper.append(imgWrapper, nick, pts);
   return wrapper;
