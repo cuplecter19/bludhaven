@@ -59,6 +59,7 @@ class SceneLayer(models.Model):
     TYPE_CLOCK = 'clock'
     TYPE_MENU_BUTTON = 'menu_button'
     TYPE_USER_PROFILE = 'user_profile'
+    TYPE_AUTH_BUTTONS = 'auth_buttons'
     TYPE_STICKER = 'sticker'
     TYPE_PARALLAX_NEAR = 'parallax_near'
     TYPE_PARALLAX_ULTRA_NEAR = 'parallax_ultra_near'
@@ -72,6 +73,7 @@ class SceneLayer(models.Model):
         (TYPE_CLOCK, 'Clock'),
         (TYPE_MENU_BUTTON, 'Menu Button'),
         (TYPE_USER_PROFILE, 'User Profile'),
+        (TYPE_AUTH_BUTTONS, 'Auth Buttons'),
         (TYPE_STICKER, 'Sticker'),
         (TYPE_PARALLAX_NEAR, 'Parallax Near'),
         (TYPE_PARALLAX_ULTRA_NEAR, 'Parallax Ultra Near'),
@@ -86,6 +88,7 @@ class SceneLayer(models.Model):
         TYPE_CLOCK: 1,
         TYPE_MENU_BUTTON: 1,
         TYPE_USER_PROFILE: 1,
+        TYPE_AUTH_BUTTONS: 1,
         TYPE_STICKER: 2,
         TYPE_PARALLAX_NEAR: 3,
         TYPE_PARALLAX_ULTRA_NEAR: 4,
