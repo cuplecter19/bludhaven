@@ -71,6 +71,7 @@ export function initEditorPanel({ store, root, render, onStickerToggle }) {
   const clockFontSizeSection = document.getElementById('clock-font-size-section');
   const fontSelect = document.getElementById('prop-font-family');
   const fontList = document.getElementById('font-list');
+  const assetUploadSection = document.getElementById('asset-upload-section');
   const fontManagementSection = document.getElementById('font-management-section');
   const assetLibrarySection = document.getElementById('asset-library-section');
   const assetThumbGrid = document.getElementById('asset-thumb-grid');
@@ -112,6 +113,7 @@ export function initEditorPanel({ store, root, render, onStickerToggle }) {
 
     const isImageLayer = IMAGE_ASSET_LAYER_TYPES.has(type);
     assetLibrarySection.hidden = !isImageLayer;
+    assetUploadSection.hidden = !isImageLayer;
   }
 
   function fillLayerProps(layer) {
