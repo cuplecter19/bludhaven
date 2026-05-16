@@ -85,6 +85,10 @@ html, body { width: 100%; height: 100%; margin: 0; padding: 0; background: var(-
   outline-offset: 2px;
 }
 
+.scene-layer--sticker-edit {
+  cursor: move;
+}
+
 .sticker-hover-controls {
   position: absolute;
   inset: -14px -14px auto auto;

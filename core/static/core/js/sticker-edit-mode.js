@@ -52,6 +52,7 @@ export function createStickerEditController({
     }
 
     bindStickerRotateHandle(stickerEl, layer, rotateHandle);
+    bindStickerDrag(stickerEl, layer);
   }
 
   function incrementStickerZ(layerId, badge) {
@@ -117,6 +118,45 @@ export function createStickerEditController({
     });
   }
 
+  function bindStickerDrag(stickerEl, layer) {
+    stickerEl.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('.sticker-hover-controls,.sticker-resize-handle,.sticker-rotate-handle')) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      const currentLayer = getLayerById(layer.id);
+      if (!currentLayer) return;
+
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const startLayerX = currentLayer.x;
+      const startLayerY = currentLayer.y;
+      const s = currentLayer.settings_json || {};
+      const xUnit = s.x_unit || 'px';
+      const yUnit = s.y_unit || 'px';
+      const containerEl = stickerEl.parentElement;
+      const containerW = containerEl ? containerEl.offsetWidth : window.innerWidth;
+      const containerH = containerEl ? containerEl.offsetHeight : window.innerHeight;
+
+      const onMove = (ev) => {
+        const dxPx = ev.clientX - startX;
+        const dyPx = ev.clientY - startY;
+        const dx = xUnit === '%' ? (dxPx / containerW) * 100 : dxPx;
+        const dy = yUnit === '%' ? (dyPx / containerH) * 100 : dyPx;
+        patchLayerLocal(layer.id, { x: startLayerX + dx, y: startLayerY + dy });
+        dirtyStickerMap.set(layer.id, true);
+      };
+
+      const onUp = () => {
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+      };
+
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp, { once: true });
+    });
+  }
+
   function bindStickerRotateHandle(stickerEl, layer, handleEl) {
     handleEl.addEventListener('pointerdown', (e) => {
       e.preventDefault();
@@ -149,6 +189,8 @@ export function createStickerEditController({
       if (!layer) continue;
       promises.push(savePatch(layerId, {
         z_index: layer.z_index,
+        x: layer.x,
+        y: layer.y,
         width: layer.width,
         height: layer.height,
         rotation_deg: layer.rotation_deg,

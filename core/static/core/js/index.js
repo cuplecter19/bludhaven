@@ -21,6 +21,23 @@ try {
   }
 } catch {}
 
+async function loadAndInjectFonts() {
+  try {
+    const res = await fetch('/api/mainpage/fonts', { credentials: 'same-origin' });
+    const payload = await res.json();
+    if (!payload.ok || !Array.isArray(payload.data)) return;
+    for (const font of payload.data) {
+      if (!font.url) continue;
+      const id = `bh-font-${font.id}`;
+      if (document.getElementById(id)) continue;
+      const style = document.createElement('style');
+      style.id = id;
+      style.textContent = `@font-face { font-family: '${font.font_family}'; src: url('${font.url}')${font.format ? ` format('${font.format}')` : ''}; font-display: swap; }`;
+      document.head.appendChild(style);
+    }
+  } catch {}
+}
+
 export async function loadActiveScene() {
   const res = await fetch('/api/mainpage/scene/active', { credentials: 'same-origin' });
   const payload = await res.json();
@@ -71,7 +88,7 @@ function render() {
 }
 
 (async function boot() {
-  const scene = await loadActiveScene();
+  const [scene] = await Promise.all([loadActiveScene(), loadAndInjectFonts()]);
   store.setScene(scene);
   render();
 

@@ -68,6 +68,12 @@ def index(request):
 
 
 @api_view(['GET'])
+def public_font_list(request):
+    fonts = CustomFont.objects.all().order_by('name', 'id')
+    return Response({'ok': True, 'data': [serialize_custom_font(font) for font in fonts]})
+
+
+@api_view(['GET'])
 def active_scene(request):
     scene = PageScene.objects.filter(is_active=True).prefetch_related('layers').first()
     if scene is None:
