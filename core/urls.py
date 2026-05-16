@@ -6,6 +6,7 @@ app_name = 'core'
 
 urlpatterns = [
     path('mainpage/scene/active', views.active_scene, name='active_scene'),
+    path('mainpage/fonts', views.public_font_list, name='public_font_list'),
     path('user/profile/', views.current_user_profile, name='current_user_profile'),
     path('editor/scenes', views.editor_scene_list, name='editor_scene_list'),
     path('editor/scenes/create', views.create_scene, name='create_scene'),

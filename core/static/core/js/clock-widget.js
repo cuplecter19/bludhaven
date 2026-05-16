@@ -2,7 +2,7 @@ const instances = new Map();
 
 export function startClockWidget(layerId, el, options = {}) {
   stopClockWidget(layerId);
-  const timezone = options.timezone || 'UTC';
+  const timezone = options.timezone || 'Asia/Seoul';
   const format = options.format || { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
   const textColor = options.text_color || options.color;
 
