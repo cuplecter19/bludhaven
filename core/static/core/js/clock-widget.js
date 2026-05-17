@@ -13,7 +13,13 @@ export function startClockWidget(layerId, el, options = {}) {
   el.innerHTML = '';
   el.append(timeEl, dateEl);
 
-  if (options.font_family) el.style.fontFamily = options.font_family;
+  if (options.font_family) {
+    el.style.fontFamily = options.font_family;
+    // Proactively trigger the download of the custom font so it renders correctly
+    // even when it is not installed on the user's device. The @font-face rule is
+    // already declared by loadAndInjectFonts(); this call starts the actual fetch.
+    document.fonts.load(`${options.font_weight || 400} 16px "${options.font_family}"`).catch(() => {});
+  }
   if (options.font_weight) el.style.fontWeight = String(options.font_weight);
   if (textColor) el.style.color = textColor;
   if (options.font_style) el.style.fontStyle = options.font_style;

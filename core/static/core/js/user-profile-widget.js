@@ -2,9 +2,11 @@ export async function createUserProfileWidget(layer) {
   const s = layer.settings_json || {};
   const wrapper = document.createElement('div');
   wrapper.className = 'user-profile-widget';
+
+  // Apply layout/decoration styles via cssText (no font-family here to avoid
+  // multi-word font name quoting issues when strings are interpolated into CSS).
   wrapper.style.cssText = `
     display:flex; flex-direction:column; align-items:center; gap:4px; box-sizing:border-box;
-    ${s.font_family ? `font-family:${s.font_family};` : ''}
     ${s.font_weight ? `font-weight:${s.font_weight};` : ''}
     ${s.font_style ? `font-style:${s.font_style};` : ''}
     ${s.text_decoration ? `text-decoration:${s.text_decoration};` : ''}
@@ -14,6 +16,15 @@ export async function createUserProfileWidget(layer) {
     ${s.line_height ? `line-height:${s.line_height};` : ''}
     ${s.border_width ? `border:${s.border_width}px ${s.border_style || 'solid'} ${s.border_color || '#000'};` : ''}
   `;
+
+  // Set font-family via the CSSOM property so multi-word names (e.g. "Noto Sans KR")
+  // are handled correctly without manual CSS-string quoting.
+  if (s.font_family) {
+    wrapper.style.fontFamily = s.font_family;
+    // Proactively trigger the download of the custom font so it renders correctly
+    // even when it is not installed on the user's device.
+    document.fonts.load(`${s.font_weight || 400} 16px "${s.font_family}"`).catch(() => {});
+  }
 
   let profileData = null;
   try {

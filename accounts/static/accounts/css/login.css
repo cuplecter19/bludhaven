@@ -1,16 +1,16 @@
 /* ==========================================================
-   accounts/static/accounts/css/signup.css
-   Signup page — fashion / botanical editorial
+   accounts/static/accounts/css/login.css
+   Login page — fashion / botanical editorial
    ========================================================== */
 
 /* Decorative corner botanical ornament */
 .auth-card::after {
-  content: '✦';
+  content: '❧';
   position: absolute;
   top: 1.6rem;
   right: 2.25rem;
-  font-size: 0.9rem;
-  color: var(--accent);
+  font-size: 1.1rem;
+  color: var(--earth);
   opacity: 0.45;
   pointer-events: none;
   line-height: 1;
