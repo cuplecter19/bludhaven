@@ -53,8 +53,8 @@ def update_daily_summary(user, mode, result):
     return summary
 
 
-POINTS_CLOZE_CORRECT = 10
-POINTS_SCRAMBLE_CORRECT = 15
+POINTS_CLOZE_CORRECT = 100
+POINTS_SCRAMBLE_CORRECT = 150
 
 
 def process_review(card, result, mode, response_ms=None):

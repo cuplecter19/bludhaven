@@ -3,24 +3,8 @@ from django.conf import settings
 
 
 class ShopItem(models.Model):
-    ITEM_TYPE_CHOICES = [
-        ('credit', '크레딧'),
-        ('inventory', '아이템'),
-    ]
-
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
-    item_type = models.CharField(
-        max_length=20,
-        choices=ITEM_TYPE_CHOICES,
-        default='credit',
-    )
-    price_points = models.PositiveIntegerField()
-    credit_amount = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        help_text="item_type이 'credit'일 때만 입력",
-    )
     image = models.ImageField(
         upload_to='shop_items/',
         null=True,
@@ -34,7 +18,7 @@ class ShopItem(models.Model):
 
 
 class Purchase(models.Model):
-    """포인트로 아이템을 구매한 거래 기록 — 영구 보존"""
+    """포인트로 아이템을 구매한 지출 기록 — 영구 보존"""
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -42,32 +26,52 @@ class Purchase(models.Model):
     )
     item = models.ForeignKey(ShopItem, on_delete=models.PROTECT)
     points_spent = models.PositiveIntegerField()
-    credits_gained = models.PositiveIntegerField(default=0)
     purchased_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.user} — {self.item.name} ({self.purchased_at:%Y-%m-%d})"
 
 
-class CreditLog(models.Model):
-    """크레딧 사용(지출) 내역 — 사용자가 직접 기록"""
-    CATEGORY_CHOICES = [
-        ('game', '게임'),
-        ('book', '책'),
-        ('hobby', '취미'),
-        ('other', '기타'),
-    ]
-
+class Review(models.Model):
+    """상점 구매 후기"""
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='credit_logs',
+        related_name='shop_reviews',
     )
-    amount = models.PositiveIntegerField()
-    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='other')
-    memo = models.CharField(max_length=200, blank=True)
-    spent_at = models.DateField()
-    logged_at = models.DateTimeField(auto_now_add=True)
+    title = models.CharField(max_length=200)
+    content = models.TextField(blank=True)
+    image = models.ImageField(
+        upload_to='shop_reviews/',
+        null=True,
+        blank=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.user} -{self.amount}원 ({self.memo})"
+        return f"[{self.user}] {self.title}"
+
+
+class ShopSetting(models.Model):
+    """상점 전역 설정 (싱글톤)"""
+    default_review_image = models.ImageField(
+        upload_to='shop_settings/',
+        null=True,
+        blank=True,
+        help_text="후기에 이미지가 없을 때 표시할 기본 이미지",
+    )
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def __str__(self):
+        return 'Shop Settings'

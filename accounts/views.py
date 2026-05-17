@@ -51,10 +51,10 @@ def signup(request):
             messages.error(request, "이미 존재하는 닉네임입니다.")
             return render(request, 'accounts/signup.html')
         
-        # 유저 생성 (가입 즉시 환영 포인트 100점 증정!)
+        # 유저 생성 (가입 즉시 환영 포인트 1000점 증정!)
         user = User.objects.create_user(username=username, password=password)
         user.nickname = nickname
-        user.points = 100 
+        user.points = 1000
         user.save()
         
         messages.success(request, f"{nickname}님, 블러드헤이븐에 오신 것을 환영합니다!")

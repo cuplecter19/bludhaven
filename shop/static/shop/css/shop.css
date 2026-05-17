@@ -162,18 +162,6 @@ body {
     color: var(--text-muted);
 }
 
-.price-sticker {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background: var(--navy);
-    color: #fff;
-    padding: 0.4rem 0.8rem;
-    font-family: var(--font-serif);
-    font-size: 0.8rem;
-    font-weight: 700;
-}
-
 .item-name {
     font-family: var(--font-ko), var(--font-serif);
     font-size: 1.2rem;
@@ -188,36 +176,43 @@ body {
     line-height: 1.5;
 }
 
-.item-meta {
-    margin-bottom: 1.5rem;
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-}
-
-.badge-type {
-    font-size: 0.65rem;
-    font-weight: 700;
-    padding: 0.2rem 0.5rem;
-    border: 1px solid var(--navy);
-}
-
-.badge-value {
-    font-size: 0.65rem;
-    font-weight: 700;
-    background: var(--blue);
-    color: #fff;
-    padding: 0.2rem 0.5rem;
-}
-
-.card-actions {
+/* ─── Buy Form ───────────────────────────────────────── */
+.buy-form {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
     margin-top: auto;
 }
 
-.full-width { width: 100%; }
+.price-input-row {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--line);
+    background: #fff;
+}
+
+.price-input {
+    flex: 1;
+    border: none;
+    padding: 0.7rem 0.8rem;
+    font-family: var(--font-sans);
+    font-size: 0.9rem;
+    outline: none;
+    background: transparent;
+    min-width: 0;
+}
+
+.price-input:focus {
+    border-color: var(--navy);
+}
+
+.price-unit {
+    padding: 0 0.8rem;
+    font-family: var(--font-serif);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    border-left: 1px solid var(--line);
+}
 
 .btn-buy {
     width: 100%;
@@ -234,13 +229,18 @@ body {
 
 .btn-buy:hover { background: var(--blue); }
 
+.delete-form {
+    margin-top: 0.4rem;
+}
+
 .btn-delete {
     width: 100%;
     background: none;
     border: 1px solid #b91c1c;
     color: #b91c1c;
     padding: 0.4rem;
-    font-size: 1rem;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
     cursor: pointer;
     transition: background 0.2s, color 0.2s;
 }
@@ -264,7 +264,6 @@ body {
     overflow: hidden;
 }
 
-/* 항상 보이는 헤더 영역 */
 .admin-section-header {
     display: flex;
     justify-content: space-between;
@@ -280,7 +279,6 @@ body {
     background: var(--bg);
 }
 
-/* 패널이 열렸을 때 헤더 하단 선 표시 */
 .admin-panel-body.is-open ~ .admin-section-header,
 .admin-section-header:has(+ .admin-panel-body.is-open) {
     border-bottom-color: var(--line);
@@ -290,6 +288,25 @@ body {
     font-family: var(--font-serif);
     font-size: 1.2rem;
     margin: 0;
+}
+
+.admin-sub-title {
+    font-family: var(--font-serif);
+    font-size: 1rem;
+    letter-spacing: 2px;
+    margin: 0 0 0.8rem;
+}
+
+.admin-hint {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 1.2rem;
+}
+
+.admin-divider {
+    border: none;
+    border-top: 1px solid var(--line);
+    margin: 2.5rem 0;
 }
 
 .btn-admin-toggle {
@@ -302,7 +319,7 @@ body {
     letter-spacing: 2px;
     cursor: pointer;
     transition: background 0.2s, color 0.2s;
-    pointer-events: none; /* 클릭은 부모 div에서 처리 */
+    pointer-events: none;
 }
 
 .admin-section-header:hover .btn-admin-toggle {
@@ -310,7 +327,6 @@ body {
     color: #fff;
 }
 
-/* 접힘/펼침 본문 */
 .admin-panel-body {
     max-height: 0;
     overflow: hidden;
@@ -319,8 +335,17 @@ body {
 }
 
 .admin-panel-body.is-open {
-    max-height: 800px; /* 충분히 큰 값 */
+    max-height: 1200px;
     padding: 2.5rem 3rem;
+}
+
+.default-thumb-preview {
+    display: block;
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    margin-bottom: 0.8rem;
+    border: 1px solid var(--line);
 }
 
 /* ─── Admin Form ─────────────────────────────────────── */
@@ -332,7 +357,10 @@ body {
 
 .full-row { grid-column: span 2; }
 
-input, select {
+input[type="text"],
+input[type="number"],
+select,
+textarea {
     width: 100%;
     padding: 0.8rem;
     border: 1px solid var(--line);
@@ -342,9 +370,17 @@ input, select {
     background: #fff;
 }
 
-input:focus, select:focus {
+input[type="text"]:focus,
+input[type="number"]:focus,
+select:focus,
+textarea:focus {
     outline: none;
     border-color: var(--navy);
+}
+
+.review-textarea {
+    min-height: 120px;
+    resize: vertical;
 }
 
 .file-input-wrapper label {
@@ -377,30 +413,6 @@ input:focus, select:focus {
     margin-bottom: 6rem;
 }
 
-.history-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    margin-bottom: 2rem;
-}
-
-.btn-settle {
-    background: none;
-    border: 2px solid var(--navy);
-    padding: 0.6rem 1.4rem;
-    font-family: var(--font-serif);
-    font-size: 0.8rem;
-    font-weight: 700;
-    letter-spacing: 2px;
-    cursor: pointer;
-    transition: background 0.2s, color 0.2s;
-}
-
-.btn-settle:hover {
-    background: var(--navy);
-    color: #fff;
-}
-
 .log-table {
     width: 100%;
     border-collapse: collapse;
@@ -422,8 +434,268 @@ input:focus, select:focus {
 
 .date-cell   { font-family: var(--font-serif); color: var(--text-muted); }
 .amount-minus { color: #b91c1c; font-weight: 700; text-align: right; }
-.amount-plus  { color: var(--blue); font-weight: 700; text-align: right; }
 .text-right   { text-align: right; }
+
+/* ─── Review Section ─────────────────────────────────── */
+.review-section {
+    margin-bottom: 6rem;
+}
+
+/* Write Review Toggle */
+.review-compose {
+    margin-bottom: 3rem;
+}
+
+.btn-write-review {
+    background: none;
+    border: 2px solid var(--navy);
+    padding: 0.6rem 1.4rem;
+    font-family: var(--font-serif);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    margin-bottom: 1.5rem;
+}
+
+.btn-write-review:hover {
+    background: var(--navy);
+    color: #fff;
+}
+
+.review-form-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease;
+}
+
+.review-form-body.is-open {
+    max-height: 800px;
+}
+
+/* Gallery Slider */
+.review-slider-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.slide-btn {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    background: none;
+    border: 2px solid var(--navy);
+    font-size: 1.8rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: serif;
+}
+
+.slide-btn:hover:not(:disabled) {
+    background: var(--navy);
+    color: #fff;
+}
+
+.slide-btn:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
+.review-track-outer {
+    flex: 1;
+    overflow: hidden;
+}
+
+.review-track {
+    display: flex;
+    gap: 1.5rem;
+    transition: transform 0.4s ease;
+}
+
+/* Review Cards */
+.review-card {
+    flex: 0 0 260px;
+    cursor: pointer;
+    border: 1px solid var(--line);
+    background: #fff;
+    transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+.review-card:hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    border-color: var(--navy);
+}
+
+.review-thumb {
+    width: 100%;
+    aspect-ratio: 4/3;
+    overflow: hidden;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.review-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.4s ease;
+}
+
+.review-card:hover .review-thumb img {
+    transform: scale(1.05);
+}
+
+.review-thumb-placeholder {
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+}
+
+.review-card-meta {
+    padding: 0.9rem 1rem;
+}
+
+.review-author {
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+    margin-bottom: 0.3rem;
+    text-transform: uppercase;
+}
+
+.review-title-preview {
+    font-family: var(--font-ko), var(--font-serif);
+    font-size: 0.95rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.review-empty {
+    grid-column: 1 / -1;
+    padding: 2rem 0;
+}
+
+/* ─── Review Modal ───────────────────────────────────── */
+.review-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.7);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+}
+
+.review-modal.is-open {
+    display: flex;
+}
+
+.review-modal-content {
+    background: #fff;
+    max-width: 740px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+}
+
+.modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 36px;
+    height: 36px;
+    background: none;
+    border: 2px solid var(--navy);
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    transition: background 0.2s, color 0.2s;
+}
+
+.modal-close:hover {
+    background: var(--navy);
+    color: #fff;
+}
+
+.modal-img-wrap {
+    width: 100%;
+    max-height: 420px;
+    overflow: hidden;
+    border-bottom: 1px solid var(--line);
+}
+
+.modal-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.modal-body {
+    padding: 2rem 2.5rem;
+}
+
+.modal-author {
+    font-size: 0.7rem;
+    letter-spacing: 3px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+}
+
+.modal-title {
+    font-family: var(--font-ko), var(--font-serif);
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1.2rem;
+}
+
+.modal-content-text {
+    font-family: var(--font-ko), var(--font-serif);
+    font-size: 0.95rem;
+    line-height: 1.8;
+    color: #334155;
+    margin-bottom: 1.5rem;
+}
+
+.modal-date {
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    margin-bottom: 1.5rem;
+}
+
+.btn-delete-review {
+    background: none;
+    border: 1px solid #b91c1c;
+    color: #b91c1c;
+    padding: 0.5rem 1rem;
+    font-family: var(--font-serif);
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+}
+
+.btn-delete-review:hover {
+    background: #b91c1c;
+    color: #fff;
+}
 
 /* ─── Footer ─────────────────────────────────────────── */
 .shop-footer {

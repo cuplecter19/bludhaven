@@ -27,12 +27,12 @@
                 <p class="stat-value">{{ request.user.points }} <small>pt</small></p>
             </div>
             <div class="stat-box main-stat">
-                <p class="stat-label">CREDITS</p>
-                <p class="stat-value">₩{{ request.user.credits }}</p>
+                <p class="stat-label">PURCHASES</p>
+                <p class="stat-value">{{ recent_purchases.count }}</p>
             </div>
             <div class="stat-box">
-                <p class="stat-label">MONTHLY SPENT</p>
-                <p class="stat-value text-muted">₩{{ this_month_spent }}</p>
+                <p class="stat-label">REVIEWS</p>
+                <p class="stat-value">{{ reviews.count }}</p>
             </div>
         </div>
     </header>
@@ -61,38 +61,38 @@
                     {% else %}
                         <div class="item-placeholder">NO IMAGE</div>
                     {% endif %}
-                    <div class="price-sticker">{{ item.price_points }} PT</div>
                 </div>
 
                 <div class="item-info">
                     <h3 class="item-name">{{ item.name }}</h3>
                     <p class="item-desc">{{ item.description|default:"No description available." }}</p>
 
-                    <div class="item-meta">
-                        {% if item.item_type == 'credit' %}
-                            <span class="badge-type">CREDIT VOUCHER</span>
-                            <span class="badge-value">+₩{{ item.credit_amount }}</span>
-                        {% else %}
-                            <span class="badge-type">INVENTORY</span>
-                        {% endif %}
-                    </div>
+                    <form method="post" action="{% url 'shop:buy_item' item.id %}" class="buy-form">
+                        {% csrf_token %}
+                        <div class="price-input-row">
+                            <input
+                                type="number"
+                                name="points_spent"
+                                min="1"
+                                placeholder="사용할 포인트 입력"
+                                required
+                                class="price-input"
+                            >
+                            <span class="price-unit">pt</span>
+                        </div>
+                        <button type="submit" class="btn-buy">PURCHASE</button>
+                    </form>
 
-                    <div class="card-actions">
-                        <form method="post" action="{% url 'shop:buy_item' item.id %}" class="full-width">
+                    {% if request.user.is_staff %}
+                        <form method="post" action="{% url 'shop:delete_item' item.id %}" class="delete-form">
                             {% csrf_token %}
-                            <button type="submit" class="btn-buy">PURCHASE</button>
+                            <button type="submit" class="btn-delete" onclick="return confirm('삭제하시겠습니까?')">× REMOVE</button>
                         </form>
-                        {% if request.user.is_staff %}
-                            <form method="post" action="{% url 'shop:delete_item' item.id %}">
-                                {% csrf_token %}
-                                <button type="submit" class="btn-delete" onclick="return confirm('삭제하시겠습니까?')">×</button>
-                            </form>
-                        {% endif %}
-                    </div>
+                    {% endif %}
                 </div>
             </div>
             {% empty %}
-                <p class="empty-msg">현장에 등록된 물품이 없습니다.</p>
+                <p class="empty-msg">현재 등록된 아이템이 없습니다.</p>
             {% endfor %}
         </div>
     </section>
@@ -101,72 +101,135 @@
     {% if request.user.is_staff %}
     <section class="admin-section">
         <div class="admin-section-header" onclick="toggleAdminPanel()">
-            <h2 class="admin-title">Staff Only: Add Item</h2>
+            <h2 class="admin-title">Staff Only: Management</h2>
             <button type="button" class="btn-admin-toggle" id="admin-toggle-btn" aria-expanded="false">
-                + ADD ITEM
+                + MANAGE
             </button>
         </div>
 
         <div class="admin-panel-body" id="admin-panel-body">
+            <!-- 아이템 추가 -->
+            <h3 class="admin-sub-title">Add Item</h3>
             <form method="post" action="{% url 'shop:add_item' %}" enctype="multipart/form-data" class="add-form">
                 {% csrf_token %}
                 <div class="form-grid">
                     <input type="text" name="name" placeholder="ITEM NAME" required>
-                    <input type="number" name="price_points" placeholder="PRICE (PT)" required>
-                    <select name="item_type" id="item-type-select" onchange="toggleCreditField(this.value)">
-                        <option value="credit">CREDIT TICKET</option>
-                        <option value="inventory">INVENTORY ITEM</option>
-                    </select>
-                    <input type="number" name="credit_amount" placeholder="CREDIT VALUE">
-                    <input type="text" name="description" placeholder="SHORT DESCRIPTION" class="full-row">
+                    <input type="text" name="description" placeholder="SHORT DESCRIPTION">
                     <div class="file-input-wrapper full-row">
-                        <label>IMAGE UPLOAD (PNG/WEBP)</label>
+                        <label>ITEM IMAGE (PNG/WEBP)</label>
                         <input type="file" name="image" accept=".png,.webp,.gif,.jpg,.jpeg">
                     </div>
                 </div>
                 <button type="submit" class="btn-submit-admin">REGISTER ITEM</button>
             </form>
+
+            <hr class="admin-divider">
+
+            <!-- 기본 후기 이미지 설정 -->
+            <h3 class="admin-sub-title">Default Review Image</h3>
+            <p class="admin-hint">후기에 이미지가 없을 때 표시할 기본 썸네일 이미지를 설정하세요.</p>
+            <form method="post" action="{% url 'shop:update_default_review_image' %}" enctype="multipart/form-data" class="add-form">
+                {% csrf_token %}
+                <div class="form-grid">
+                    <div class="file-input-wrapper full-row">
+                        <label>DEFAULT REVIEW IMAGE (PNG/WEBP)</label>
+                        {% if setting.default_review_image %}
+                            <img src="{{ setting.default_review_image.url }}" alt="current default" class="default-thumb-preview">
+                        {% endif %}
+                        <input type="file" name="default_review_image" accept=".png,.webp,.gif,.jpg,.jpeg" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn-submit-admin">UPDATE IMAGE</button>
+            </form>
         </div>
     </section>
     {% endif %}
 
-    <!-- 내역 (Archive Ledger) -->
+    <!-- 구매 내역 (Archive Ledger) -->
     <section class="history-section">
-        <div class="history-header">
+        <div class="section-header">
             <h2 class="section-title">Ledger Archive</h2>
-            <button class="btn-settle" onclick="openModal()">SETTLE CREDIT</button>
+            <div class="thin-line"></div>
         </div>
 
         <table class="log-table">
             <thead>
                 <tr>
                     <th>DATE</th>
-                    <th>DESCRIPTION</th>
-                    <th>CATEGORY</th>
-                    <th class="text-right">AMOUNT</th>
+                    <th>ITEM</th>
+                    <th class="text-right">POINTS SPENT</th>
                 </tr>
             </thead>
             <tbody>
-                {% for log in credit_logs %}
-                <tr>
-                    <td class="date-cell">{{ log.spent_at|date:"M d, Y" }}</td>
-                    <td>{{ log.memo|default:"—" }}</td>
-                    <td class="cat-cell">{{ log.get_category_display }}</td>
-                    <td class="amount-minus">-₩{{ log.amount }}</td>
-                </tr>
-                {% endfor %}
                 {% for purchase in recent_purchases %}
                 <tr>
                     <td class="date-cell">{{ purchase.purchased_at|date:"M d, Y" }}</td>
-                    <td>{{ purchase.item.name }} PURCHASE</td>
-                    <td class="cat-cell">—</td>
-                    <td class="{% if purchase.credits_gained > 0 %}amount-plus{% endif %}">
-                        {% if purchase.credits_gained > 0 %}+₩{{ purchase.credits_gained }}{% else %}—{% endif %}
-                    </td>
+                    <td>{{ purchase.item.name }}</td>
+                    <td class="amount-minus">-{{ purchase.points_spent }}pt</td>
                 </tr>
+                {% empty %}
+                <tr><td colspan="3" class="empty-msg">구매 내역이 없습니다.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
+    </section>
+
+    <!-- 후기 섹션 -->
+    <section class="review-section">
+        <div class="section-header">
+            <h2 class="section-title">Community Reviews</h2>
+            <div class="thin-line"></div>
+        </div>
+
+        <!-- 후기 작성 폼 (토글) -->
+        <div class="review-compose">
+            <button class="btn-write-review" onclick="toggleReviewForm()" id="write-review-btn">+ WRITE REVIEW</button>
+            <div class="review-form-body" id="review-form-body">
+                <form method="post" action="{% url 'shop:add_review' %}" enctype="multipart/form-data" class="add-form">
+                    {% csrf_token %}
+                    <div class="form-grid">
+                        <input type="text" name="title" placeholder="REVIEW TITLE" required class="full-row">
+                        <textarea name="content" placeholder="Share your experience..." class="full-row review-textarea"></textarea>
+                        <div class="file-input-wrapper full-row">
+                            <label>IMAGE (OPTIONAL)</label>
+                            <input type="file" name="image" accept=".png,.webp,.gif,.jpg,.jpeg">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-submit-admin">POST REVIEW</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- 갤러리 슬라이더 -->
+        {% if reviews %}
+        <div class="review-slider-wrapper">
+            <button class="slide-btn slide-prev" onclick="slideReviews(-1)" aria-label="Previous">&#8249;</button>
+            <div class="review-track-outer">
+                <div class="review-track" id="review-track">
+                    {% for review in reviews %}
+                    <div class="review-card" onclick="openReviewModal({{ review.id }})">
+                        <div class="review-thumb">
+                            {% if review.image %}
+                                <img src="{{ review.image.url }}" alt="{{ review.title }}">
+                            {% elif setting.default_review_image %}
+                                <img src="{{ setting.default_review_image.url }}" alt="">
+                            {% else %}
+                                <div class="review-thumb-placeholder">NO IMAGE</div>
+                            {% endif %}
+                        </div>
+                        <div class="review-card-meta">
+                            <p class="review-author">{{ review.user.nickname }}</p>
+                            <p class="review-title-preview">{{ review.title }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <button class="slide-btn slide-next" onclick="slideReviews(1)" aria-label="Next">&#8250;</button>
+        </div>
+        {% else %}
+        <p class="empty-msg review-empty">아직 후기가 없어요. 첫 번째 후기를 남겨보세요!</p>
+        {% endif %}
     </section>
 
     <footer class="shop-footer">
@@ -174,26 +237,119 @@
     </footer>
 </div>
 
+<!-- 후기 모달들 -->
+{% for review in reviews %}
+<div class="review-modal" id="review-modal-{{ review.id }}" onclick="closeReviewModal(this)">
+    <div class="review-modal-content" onclick="event.stopPropagation()">
+        <button class="modal-close" onclick="closeReviewModal(document.getElementById('review-modal-{{ review.id }}'))">&times;</button>
+        {% if review.image %}
+            <div class="modal-img-wrap">
+                <img src="{{ review.image.url }}" alt="{{ review.title }}" class="modal-img">
+            </div>
+        {% elif setting.default_review_image %}
+            <div class="modal-img-wrap">
+                <img src="{{ setting.default_review_image.url }}" alt="" class="modal-img">
+            </div>
+        {% endif %}
+        <div class="modal-body">
+            <p class="modal-author">{{ review.user.nickname }}</p>
+            <h3 class="modal-title">{{ review.title }}</h3>
+            {% if review.content %}
+            <p class="modal-content-text">{{ review.content|linebreaksbr }}</p>
+            {% endif %}
+            <p class="modal-date">{{ review.created_at|date:"F j, Y" }}</p>
+            {% if request.user == review.user or request.user.is_staff %}
+            <form method="post" action="{% url 'shop:delete_review' review.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn-delete-review" onclick="return confirm('후기를 삭제하시겠습니까?')">DELETE REVIEW</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endfor %}
+
 <script>
+    /* ── Admin panel toggle ──────────────────────────────── */
     function toggleAdminPanel() {
         const body = document.getElementById('admin-panel-body');
         const btn  = document.getElementById('admin-toggle-btn');
         const isOpen = body.classList.toggle('is-open');
-        btn.textContent  = isOpen ? '− CLOSE' : '+ ADD ITEM';
+        btn.textContent = isOpen ? '− CLOSE' : '+ MANAGE';
         btn.setAttribute('aria-expanded', isOpen);
     }
 
-    function toggleCreditField(value) {
-        const creditInput = document.querySelector('input[name="credit_amount"]');
-        if (creditInput) {
-            creditInput.style.display = (value === 'credit') ? '' : 'none';
+    /* ── Review form toggle ─────────────────────────────── */
+    function toggleReviewForm() {
+        const body = document.getElementById('review-form-body');
+        const btn  = document.getElementById('write-review-btn');
+        const isOpen = body.classList.toggle('is-open');
+        btn.textContent = isOpen ? '− CANCEL' : '+ WRITE REVIEW';
+    }
+
+    /* ── Review gallery slider ──────────────────────────── */
+    let reviewOffset = 0;
+
+    function getCardWidth() {
+        const card = document.querySelector('.review-card');
+        if (!card) return 280;
+        const style = window.getComputedStyle(card);
+        const gap = parseInt(window.getComputedStyle(document.getElementById('review-track')).gap) || 24;
+        return card.offsetWidth + gap;
+    }
+
+    function slideReviews(direction) {
+        const track = document.getElementById('review-track');
+        if (!track) return;
+        const cards = track.querySelectorAll('.review-card');
+        const outer = track.parentElement;
+        const cardW = getCardWidth();
+        const visible = Math.max(1, Math.floor(outer.offsetWidth / cardW));
+        const maxOffset = Math.max(0, cards.length - visible);
+
+        reviewOffset = Math.max(0, Math.min(maxOffset, reviewOffset + direction));
+        track.style.transform = `translateX(-${reviewOffset * cardW}px)`;
+
+        document.querySelector('.slide-prev').disabled = reviewOffset === 0;
+        document.querySelector('.slide-next').disabled = reviewOffset >= maxOffset;
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const prevBtn = document.querySelector('.slide-prev');
+        const nextBtn = document.querySelector('.slide-next');
+        if (prevBtn) prevBtn.disabled = true;
+        if (nextBtn) {
+            const track = document.getElementById('review-track');
+            if (track) {
+                const cards = track.querySelectorAll('.review-card');
+                const outer = track.parentElement;
+                const cardW = getCardWidth();
+                const visible = Math.max(1, Math.floor(outer.offsetWidth / cardW));
+                nextBtn.disabled = cards.length <= visible;
+            }
+        }
+    });
+
+    /* ── Review modals ──────────────────────────────────── */
+    function openReviewModal(id) {
+        const modal = document.getElementById('review-modal-' + id);
+        if (modal) {
+            modal.classList.add('is-open');
+            document.body.style.overflow = 'hidden';
         }
     }
 
-    // 초기 상태: credit_amount 필드 표시 여부 초기화
-    document.addEventListener('DOMContentLoaded', function () {
-        const sel = document.getElementById('item-type-select');
-        if (sel) toggleCreditField(sel.value);
+    function closeReviewModal(el) {
+        el.classList.remove('is-open');
+        document.body.style.overflow = '';
+    }
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('.review-modal.is-open').forEach(function (m) {
+                closeReviewModal(m);
+            });
+        }
     });
 </script>
 </body>
