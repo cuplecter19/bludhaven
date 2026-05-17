@@ -427,8 +427,8 @@ body {
   .studio-detail-layout { grid-template-columns: 1fr; gap: 2rem; }
 }
 .studio-detail-left { min-width: 0; }
-.studio-detail-right { }
-.sticky-panel { position: sticky; top: 2rem; }
+.studio-detail-right { width: 280px; min-width: 220px; max-width: 320px; flex-shrink: 0;}
+.sticky-panel { position: sticky; top: 2rem; width: 100%; min-width: 0; overflow: hidden;}
 
 .project-detail-header { line-height: 1.4; }
 .project-detail-top {
@@ -500,7 +500,7 @@ body {
   margin-bottom: 1rem;
   color: var(--ink);
 }
-.linked-notes-list { list-style: none; margin-bottom: 1rem; }
+.linked-notes-list { list-style: none; margin-bottom: 1rem; width: 100%; }
 .linked-note-item {
   display: flex;
   align-items: center;
