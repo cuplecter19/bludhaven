@@ -1,3 +1,4 @@
+import datetime
 import json
 
 from django.contrib.auth.decorators import login_required
@@ -5,9 +6,12 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from .models import MoodLog, Note, NoteReference, PHQ9Log, Project, ProjectNote, SparkTag
+from .models import GoalLog, MoodLog, Note, NoteReference, PHQ9Log, Project, ProjectNote, SparkTag
 from .services import (
     calculate_phq9_total,
+    get_behavior_tag_frequencies,
+    get_goallog_dict,
+    get_goal_logs_for_project,
     get_mood_trend,
     get_project_dict,
     get_projects_for_user,
@@ -20,6 +24,21 @@ from .services import (
 )
 
 EMOTION_TAGS = ['불안', '무기력', '예민', '슬픔', '피곤함', '괜찮음', '평온함', '좋음', '설렘']
+
+BEHAVIOR_TAGS = [
+    {'text': '시작을 못 했다', 'slug': 'cant_start'},
+    {'text': '중간에 그만뒀다', 'slug': 'gave_up'},
+    {'text': '집중이 흩어졌다', 'slug': 'scattered'},
+    {'text': '감정이 격해졌다', 'slug': 'emotional'},
+    {'text': '몸이 너무 무거웠다', 'slug': 'exhausted'},
+    {'text': '계획대로 됐다', 'slug': 'on_track'},
+    {'text': '예상보다 잘 됐다', 'slug': 'better_than_expected'},
+    {'text': '특별한 패턴 없음', 'slug': 'no_pattern'},
+]
+
+VALID_BEHAVIOR_SLUGS = {tag['slug'] for tag in BEHAVIOR_TAGS}
+
+BEHAVIOR_SLUG_TO_TEXT = {tag['slug']: tag['text'] for tag in BEHAVIOR_TAGS}
 
 
 def _note_to_dict(note, preview_len=80):
@@ -74,12 +93,32 @@ def spark_detail(request, note_id):
 
 @login_required
 def pulse_home(request):
-    return render(request, 'atelier/pulse/home.html')
+    log_count = MoodLog.objects.filter(user=request.user).count()
+    show_patterns = log_count >= 14
+    pattern_frequencies = []
+    if show_patterns:
+        raw = get_behavior_tag_frequencies(request.user, days=30)
+        if raw:
+            max_count = raw[0]['count']
+            for item in raw:
+                pattern_frequencies.append({
+                    'slug': item['slug'],
+                    'text': BEHAVIOR_SLUG_TO_TEXT.get(item['slug'], item['slug']),
+                    'count': item['count'],
+                    'pct': round(item['count'] / max_count * 100) if max_count else 0,
+                })
+    return render(request, 'atelier/pulse/home.html', {
+        'show_patterns': show_patterns and bool(pattern_frequencies),
+        'pattern_frequencies': pattern_frequencies,
+    })
 
 
 @login_required
 def pulse_checkin(request):
-    return render(request, 'atelier/pulse/checkin.html', {'emotion_tags': EMOTION_TAGS})
+    return render(request, 'atelier/pulse/checkin.html', {
+        'emotion_tags': EMOTION_TAGS,
+        'behavior_tags': BEHAVIOR_TAGS,
+    })
 
 
 PHQ9_QUESTIONS = [
@@ -232,6 +271,7 @@ def api_mood_list(request):
                 'mood_score': log.mood_score,
                 'energy_score': log.energy_score,
                 'emotion_tags': log.emotion_tags,
+                'behavior_tags': log.behavior_tags,
                 'note': log.note,
                 'logged_at': log.logged_at.isoformat(),
             }
@@ -257,11 +297,22 @@ def api_mood_list(request):
             except (ValueError, TypeError):
                 energy_score = None
 
+        raw_behavior = data.get('behavior_tags', '')
+        if raw_behavior:
+            slugs = [s.strip() for s in raw_behavior.split(';') if s.strip()]
+            invalid = [s for s in slugs if s not in VALID_BEHAVIOR_SLUGS]
+            if invalid:
+                return JsonResponse({'error': f'Invalid behavior slugs: {invalid}'}, status=400)
+            behavior_tags = ';'.join(slugs)
+        else:
+            behavior_tags = ''
+
         log = MoodLog.objects.create(
             user=request.user,
             mood_score=mood_score,
             energy_score=energy_score,
             emotion_tags=data.get('emotion_tags', ''),
+            behavior_tags=behavior_tags,
             note=data.get('note') or None,
         )
         return JsonResponse({
@@ -269,6 +320,7 @@ def api_mood_list(request):
             'mood_score': log.mood_score,
             'energy_score': log.energy_score,
             'emotion_tags': log.emotion_tags,
+            'behavior_tags': log.behavior_tags,
             'note': log.note,
             'logged_at': log.logged_at.isoformat(),
         }, status=201)
@@ -284,6 +336,7 @@ def api_mood_detail(request, log_id):
         'mood_score': log.mood_score,
         'energy_score': log.energy_score,
         'emotion_tags': log.emotion_tags,
+        'behavior_tags': log.behavior_tags,
         'note': log.note,
         'logged_at': log.logged_at.isoformat(),
     })
@@ -403,6 +456,14 @@ PROJECT_COLORS = [
 def studio_home(request):
     status_filter = request.GET.get('status', 'active')
     projects = get_projects_for_user(request.user, status=status_filter)
+    today = datetime.date.today()
+    week_start = today - datetime.timedelta(days=today.weekday())
+    for project in projects:
+        active_logs = project.goal_logs.filter(is_deleted=False)
+        project.weekly_log_count = active_logs.filter(logged_at__gte=week_start).count()
+        project.done_log_count = active_logs.filter(is_done=True).count()
+        last_log = active_logs.order_by('-logged_at', '-created_at').first()
+        project.last_log_preview = last_log.body[:60] if last_log else ''
     return render(request, 'atelier/studio/home.html', {
         'projects': projects,
         'status_filter': status_filter,
@@ -425,16 +486,24 @@ def studio_detail(request, project_id):
         .filter(project_links__project=project)
         .order_by('-created_at')
     )
+    goal_logs = get_goal_logs_for_project(project)
     project_statuses = [
         ('active', '진행 중'),
         ('paused', '잠시 멈춤'),
         ('done', '완료'),
     ]
+    log_type_choices = [
+        ('note', '메모'),
+        ('done', '한 것'),
+        ('next', '다음에 할 것'),
+    ]
     return render(request, 'atelier/studio/detail.html', {
         'project': project,
         'linked_notes': linked_notes,
+        'goal_logs': goal_logs,
         'colors': PROJECT_COLORS,
         'project_statuses': project_statuses,
+        'log_type_choices': log_type_choices,
     })
 
 
@@ -484,7 +553,7 @@ def api_project_detail(request, project_id):
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
 
-        updatable = ('title', 'description', 'status', 'current_focus', 'next_steps',
+        updatable = ('title', 'description', 'status', 'goal_description',
                      'completed_notes', 'color_hex', 'sort_order')
         for field in updatable:
             if field in data:
@@ -552,3 +621,76 @@ def api_projects_reorder(request):
 
     reorder_projects(request.user, ordered_ids)
     return JsonResponse({'ok': True})
+
+
+# ---------------------------------------------------------------------------
+# GoalLog API views
+# ---------------------------------------------------------------------------
+
+@login_required
+def api_goal_logs_list(request, project_id):
+    project = get_object_or_404(Project, id=project_id, user=request.user)
+
+    if request.method == 'GET':
+        logs = get_goal_logs_for_project(project)
+        return JsonResponse({'logs': [get_goallog_dict(log) for log in logs]})
+
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+        body = (data.get('body') or '').strip()
+        if not body:
+            return JsonResponse({'error': 'body is required'}, status=400)
+
+        log_type = data.get('log_type', 'note')
+        if log_type not in {'note', 'done', 'next'}:
+            log_type = 'note'
+
+        log = GoalLog.objects.create(
+            project=project,
+            user=request.user,
+            body=body,
+            is_done=bool(data.get('is_done', False)),
+            log_type=log_type,
+        )
+        return JsonResponse(get_goallog_dict(log), status=201)
+
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+@login_required
+def api_goal_log_detail(request, project_id, log_id):
+    project = get_object_or_404(Project, id=project_id, user=request.user)
+    log = get_object_or_404(GoalLog, id=log_id, project=project, user=request.user)
+
+    if request.method == 'GET':
+        return JsonResponse(get_goallog_dict(log))
+
+    if request.method == 'PATCH':
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+        if 'body' in data:
+            body = (data['body'] or '').strip()
+            if body:
+                log.body = body
+        if 'is_done' in data:
+            log.is_done = bool(data['is_done'])
+        if 'log_type' in data and data['log_type'] in {'note', 'done', 'next'}:
+            log.log_type = data['log_type']
+        if 'is_deleted' in data:
+            log.is_deleted = bool(data['is_deleted'])
+        log.save()
+        return JsonResponse(get_goallog_dict(log))
+
+    if request.method == 'DELETE':
+        log.is_deleted = True
+        log.save(update_fields=['is_deleted'])
+        return JsonResponse({}, status=204)
+
+    return JsonResponse({'error': 'Method not allowed'}, status=405)

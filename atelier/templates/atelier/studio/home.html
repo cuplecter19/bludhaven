@@ -32,17 +32,17 @@
       <p class="project-desc">{{ project.description }}</p>
       {% endif %}
       <p class="project-focus">
-        {% if project.current_focus %}
-          {{ project.current_focus|truncatechars:120 }}
+        {% if project.last_log_preview %}
+          {{ project.last_log_preview }}
+        {% elif project.goal_description %}
+          {{ project.goal_description|truncatechars:120 }}
         {% else %}
-          <span class="empty-hint">지금 집중하고 있는 것을 적어보세요</span>
+          <span class="empty-hint">Goal에 대해 한 줄 적어두세요</span>
         {% endif %}
       </p>
       <div class="project-card-footer">
-        <span class="note-count">
-          {% with cnt=project.project_notes.count %}
-            {% if cnt %}메모 {{ cnt }}개{% endif %}
-          {% endwith %}
+        <span class="project-log-stats">
+          {% if project.weekly_log_count %}이번 주 {{ project.weekly_log_count }}개 기록{% endif %}{% if project.done_log_count %}<span class="done-log-count"> 완료 {{ project.done_log_count }}개</span>{% endif %}
         </span>
         <time class="project-date">{{ project.updated_at|date:"Y.m.d" }}</time>
       </div>

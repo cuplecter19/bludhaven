@@ -30,18 +30,47 @@
       <p id="detail-desc" class="project-detail-desc">{{ project.description|default:"" }}</p>
     </div>
 
-    <!-- Current focus -->
+    <!-- Goal description -->
     <section class="focus-section">
-      <h2 class="section-heading">지금 하고 있는 것</h2>
-      <textarea id="current-focus" class="focus-textarea autoresize" placeholder="지금 집중하고 있는 것을 적어보세요.">{{ project.current_focus|default:"" }}</textarea>
+      <h2 class="section-heading">Goal</h2>
+      <textarea id="goal-description" class="focus-textarea autoresize" placeholder="이 Goal에 대해 한 줄 적어두세요.">{{ project.goal_description|default:"" }}</textarea>
     </section>
 
     <div class="section-divider"></div>
 
-    <!-- Next steps -->
-    <section class="focus-section">
-      <h2 class="section-heading">다음에 할 것</h2>
-      <textarea id="next-steps" class="focus-textarea autoresize" placeholder="다음 단계로 하고 싶은 것을 적어보세요.">{{ project.next_steps|default:"" }}</textarea>
+    <!-- Log section -->
+    <section class="goallog-section">
+      <h2 class="section-heading">Log</h2>
+
+      <!-- New log input -->
+      <div class="goallog-add-area">
+        <textarea id="new-log-body" class="focus-textarea autoresize" rows="2" placeholder="오늘 한 것, 막힌 것, 다음에 할 것…"></textarea>
+        <div class="goallog-add-controls">
+          <select id="new-log-type" class="goallog-type-select">
+            {% for val, label_ko in log_type_choices %}
+            <option value="{{ val }}">{{ label_ko }}</option>
+            {% endfor %}
+          </select>
+          <button id="add-log-btn" class="btn btn-primary" type="button">기록 추가</button>
+        </div>
+      </div>
+
+      <!-- Log list -->
+      <ul class="goallog-list" id="goallog-list">
+        {% for log in goal_logs %}
+        <li class="goallog-item {% if log.is_done %}is-done{% endif %}" data-log-id="{{ log.id }}">
+          <div class="goallog-item-top">
+            <button type="button" class="goallog-done-btn {% if log.is_done %}checked{% endif %}" data-log-id="{{ log.id }}" title="완료 토글">{% if log.is_done %}✓{% else %}○{% endif %}</button>
+            <span class="goallog-type-badge goallog-type-{{ log.log_type }}">{{ log.get_log_type_display }}</span>
+            <time class="goallog-date">{{ log.logged_at|date:"m.d" }}</time>
+            <button type="button" class="goallog-delete-btn" data-log-id="{{ log.id }}" title="삭제">✕</button>
+          </div>
+          <p class="goallog-body">{{ log.body }}</p>
+        </li>
+        {% empty %}
+        <li class="goallog-empty" id="goallog-empty-hint">아직 기록이 없어요. 오늘 한 것을 남겨보세요.</li>
+        {% endfor %}
+      </ul>
     </section>
 
     <div class="section-divider"></div>
@@ -95,6 +124,7 @@
   const PROJECT_ID = {{ project.id }};
   const PATCH_URL = `/atelier/api/projects/${PROJECT_ID}/`;
   const NOTES_URL = `/atelier/api/projects/${PROJECT_ID}/notes/`;
+  const LOGS_URL = `/atelier/api/projects/${PROJECT_ID}/logs/`;
 
   function getCsrfToken() {
     for (let c of document.cookie.split(';')) {
@@ -163,11 +193,8 @@
     saveTimer = setTimeout(() => saveProject(fields), DEBOUNCE_MS);
   }
 
-  document.getElementById('current-focus').addEventListener('input', function() {
-    scheduleSave({ current_focus: this.value });
-  });
-  document.getElementById('next-steps').addEventListener('input', function() {
-    scheduleSave({ next_steps: this.value });
+  document.getElementById('goal-description').addEventListener('input', function() {
+    scheduleSave({ goal_description: this.value });
   });
   if (document.getElementById('completed-notes')) {
     document.getElementById('completed-notes').addEventListener('input', function() {
@@ -181,8 +208,7 @@
       e.preventDefault();
       clearTimeout(saveTimer);
       saveProject({
-        current_focus: document.getElementById('current-focus').value,
-        next_steps: document.getElementById('next-steps').value,
+        goal_description: document.getElementById('goal-description').value,
         completed_notes: document.getElementById('completed-notes') ? document.getElementById('completed-notes').value : undefined,
       });
     }
@@ -212,6 +238,101 @@
       }
     });
   });
+
+  // GoalLog — add new log
+  const newLogBody = document.getElementById('new-log-body');
+  const newLogType = document.getElementById('new-log-type');
+  document.getElementById('add-log-btn').addEventListener('click', async () => {
+    const body = newLogBody.value.trim();
+    if (!body) return;
+    try {
+      const resp = await fetch(LOGS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+        body: JSON.stringify({ body, log_type: newLogType.value }),
+      });
+      if (resp.ok) {
+        const log = await resp.json();
+        prependLogItem(log);
+        newLogBody.value = '';
+        newLogBody.style.height = 'auto';
+        document.getElementById('goallog-empty-hint')?.remove();
+      }
+    } catch (err) {
+      console.error('[studio_detail] add log failed:', err);
+    }
+  });
+
+  function logTypeLabel(t) {
+    return { note: '메모', done: '한 것', next: '다음에 할 것' }[t] || t;
+  }
+
+  function prependLogItem(log) {
+    const list = document.getElementById('goallog-list');
+    const li = document.createElement('li');
+    li.className = 'goallog-item' + (log.is_done ? ' is-done' : '');
+    li.dataset.logId = log.id;
+    const dateStr = log.logged_at.slice(5).replace('-', '.');  // mm.dd
+    li.innerHTML = `
+      <div class="goallog-item-top">
+        <button type="button" class="goallog-done-btn ${log.is_done ? 'checked' : ''}" data-log-id="${log.id}" title="완료 토글">${log.is_done ? '✓' : '○'}</button>
+        <span class="goallog-type-badge goallog-type-${escapeHtml(log.log_type)}">${escapeHtml(logTypeLabel(log.log_type))}</span>
+        <time class="goallog-date">${escapeHtml(dateStr)}</time>
+        <button type="button" class="goallog-delete-btn" data-log-id="${log.id}" title="삭제">✕</button>
+      </div>
+      <p class="goallog-body">${escapeHtml(log.body)}</p>`;
+    list.prepend(li);
+    bindLogItem(li);
+  }
+
+  function bindLogItem(li) {
+    const logId = li.dataset.logId;
+    li.querySelector('.goallog-done-btn')?.addEventListener('click', () => toggleDone(li, logId));
+    li.querySelector('.goallog-delete-btn')?.addEventListener('click', () => deleteLog(li, logId));
+  }
+
+  async function toggleDone(li, logId) {
+    const isDone = !li.classList.contains('is-done');
+    try {
+      const resp = await fetch(`${LOGS_URL}${logId}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+        body: JSON.stringify({ is_done: isDone }),
+      });
+      if (resp.ok) {
+        li.classList.toggle('is-done', isDone);
+        const btn = li.querySelector('.goallog-done-btn');
+        btn.classList.toggle('checked', isDone);
+        btn.textContent = isDone ? '✓' : '○';
+      }
+    } catch (err) {
+      console.error('[studio_detail] toggle done failed:', err);
+    }
+  }
+
+  async function deleteLog(li, logId) {
+    try {
+      const resp = await fetch(`${LOGS_URL}${logId}/`, {
+        method: 'DELETE',
+        headers: { 'X-CSRFToken': getCsrfToken() },
+      });
+      if (resp.ok || resp.status === 204) {
+        li.remove();
+        if (!document.querySelector('#goallog-list .goallog-item')) {
+          const hint = document.createElement('li');
+          hint.id = 'goallog-empty-hint';
+          hint.className = 'goallog-empty';
+          hint.textContent = '아직 기록이 없어요. 오늘 한 것을 남겨보세요.';
+          document.getElementById('goallog-list').appendChild(hint);
+        }
+      }
+    } catch (err) {
+      console.error('[studio_detail] delete log failed:', err);
+    }
+  }
+
+  // Bind existing log items
+  document.querySelectorAll('.goallog-item').forEach(li => bindLogItem(li));
 
   // Note search & link
   const searchInput = document.getElementById('note-search-input');
@@ -313,7 +434,7 @@
   searchInput.addEventListener('blur', () => setTimeout(() => searchResults.classList.add('hidden'), 200));
 
   function escapeHtml(str) {
-    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/'/g, '&#x27;').replace(/"/g, '&quot;');
   }
 })();
 </script>
