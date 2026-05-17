@@ -1,3 +1,4 @@
+import datetime
 import json
 
 from django.contrib.auth.decorators import login_required
@@ -453,7 +454,6 @@ PROJECT_COLORS = [
 
 @login_required
 def studio_home(request):
-    import datetime
     status_filter = request.GET.get('status', 'active')
     projects = get_projects_for_user(request.user, status=status_filter)
     today = datetime.date.today()

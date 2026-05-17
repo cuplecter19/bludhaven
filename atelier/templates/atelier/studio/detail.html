@@ -434,7 +434,7 @@
   searchInput.addEventListener('blur', () => setTimeout(() => searchResults.classList.add('hidden'), 200));
 
   function escapeHtml(str) {
-    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/'/g, '&#x27;').replace(/"/g, '&quot;');
   }
 })();
 </script>
