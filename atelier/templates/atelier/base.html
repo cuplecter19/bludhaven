@@ -45,7 +45,7 @@
         style.textContent = `@font-face { font-family: '${ff}'; src: url('${url}')${fmt}; font-display: swap; }`;
         document.head.appendChild(style);
       }
-    } catch {}
+    } catch (err) { console.warn('[Atelier] Font loading failed:', err); }
   })();
   </script>
 </body>
