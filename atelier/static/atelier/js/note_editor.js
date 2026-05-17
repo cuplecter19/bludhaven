@@ -262,4 +262,7 @@
   }
 
   bodyTextarea.addEventListener('blur', function() { setTimeout(hideDropdown, 200); });
+
+  // Expose save function for publish button
+  window.__saveNote = save;
 })();
