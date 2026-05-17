@@ -59,6 +59,13 @@ nav a.active { color: var(--navy); border-bottom: 2px solid var(--navy); padding
 .result-correct { color: #166534; font-size: 1.1rem; margin-bottom: 1rem; }
 .result-wrong   { color: #991B1B; font-size: 1.1rem; margin-bottom: 1rem; }
 
+/* ── Tags ── */
+.tag {
+  display: inline-block; font-size: 0.7rem; background: var(--line);
+  padding: 0.2rem 0.6rem; color: var(--gray); margin: 0 0.2rem;
+}
+
 /* ── Utility ── */
 .empty-state { color: var(--gray); font-size: 1.1rem; padding: 4rem 0; text-align: center; }
+.hidden { display: none !important; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; } }

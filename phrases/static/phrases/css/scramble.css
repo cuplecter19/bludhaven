@@ -1,0 +1,53 @@
+.container { max-width: 900px; margin: 5rem auto; padding: 0 2rem; text-align: center; }
+
+.card-meta {
+  font-size: 0.75rem; color: var(--gray); letter-spacing: 2px;
+  text-transform: uppercase; margin-bottom: 2rem;
+}
+
+.phrase-ko {
+  font-family: 'Noto Sans KR'; font-size: 1.5rem; font-weight: 300;
+  margin-bottom: 3rem; color: var(--navy);
+}
+
+.word-bank {
+  display: flex; flex-wrap: wrap; justify-content: center;
+  gap: 0.75rem; margin-bottom: 2.5rem; min-height: 56px;
+}
+
+.word-token {
+  padding: 0.6rem 1.2rem; background: #fff; border: 1px solid var(--line);
+  font-size: 0.9rem; cursor: pointer; letter-spacing: 0.5px;
+  transition: 0.2s; user-select: none;
+}
+
+.word-token:hover { border-color: var(--accent); background: #fdf8f6; }
+.word-token.selected { background: var(--navy); color: #fff; border-color: var(--navy); }
+
+.answer-track {
+  border-bottom: 2px solid var(--navy); min-height: 56px; padding: 0.5rem;
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 0.75rem;
+  margin-bottom: 2.5rem;
+}
+
+.answer-track .word-token { cursor: pointer; }
+
+.btn-group { display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; }
+
+.btn-reset { background: var(--line); color: var(--navy); }
+.btn-reset:hover { background: #ddd5ce; }
+
+.answer-reveal {
+  margin-top: 2rem; padding-top: 2rem;
+  border-top: 1px solid var(--line); animation: fadeIn 0.5s ease;
+}
+
+.answer-reveal .phrase {
+  font-family: 'Noto Sans KR'; font-size: 1.5rem; font-weight: 500; color: var(--navy);
+}
+
+.result-area { margin-top: 2rem; }
+
+.next-btn-area { margin-top: 2rem; }
+
+#nextBtn { padding: 0.8rem 2rem; }
