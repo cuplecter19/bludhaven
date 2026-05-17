@@ -15,7 +15,7 @@
 body {
   background: var(--paper);
   color: var(--ink);
-  font-family: 'Georgia', serif;
+  font-family: 'Pretendard', Georgia, sans-serif;
   line-height: 1.7;
   min-height: 100vh;
 }
@@ -36,12 +36,13 @@ body {
 .nav-brand {
   font-size: 1.3rem;
   font-weight: bold;
+  font-family: 'ClassyVogue', serif;
   color: var(--ink);
   text-decoration: none;
   letter-spacing: 0.04em;
 }
 .nav-links { display: flex; gap: 1.5rem; }
-.nav-links a { color: var(--ink-soft); text-decoration: none; font-size: 0.95rem; }
+.nav-links a { color: var(--ink-soft); text-decoration: none; font-size: 0.95rem; font-family: 'ClassyVogue', serif; letter-spacing: 0.03em; }
 .nav-links a:hover { color: var(--ink); }
 
 /* Main */
@@ -82,7 +83,7 @@ body {
 .note-card:hover { border-color: var(--accent); }
 .note-card.pinned { border-left: 3px solid var(--accent); }
 .note-card-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem; }
-.note-card-title { font-size: 0.95rem; color: var(--ink); }
+.note-card-title { font-size: 0.95rem; color: var(--ink); font-family: 'Mona12', 'Courier New', monospace; }
 .note-card-footer { display: flex; justify-content: space-between; margin-top: 0.4rem; }
 .note-card-date, .ref-count { font-size: 0.78rem; color: var(--ink-soft); }
 .pin-indicator { color: var(--accent); font-size: 0.85rem; }
@@ -190,8 +191,10 @@ body {
 .autocomplete-item:hover { background: var(--line); }
 
 /* Home layout */
-.home-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; margin-bottom: 2rem; }
+.home-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-bottom: 2rem; }
 @media (max-width: 700px) { .home-layout { grid-template-columns: 1fr; } }
+.home-notes { padding-right: 2.5rem; border-right: 1px solid var(--line); }
+.home-pulse { padding-left: 2.5rem; }
 .home-actions { display: flex; gap: 1rem; margin-top: 1.5rem; }
 .list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
 
@@ -213,6 +216,16 @@ body {
 
 .today-mood { padding: 1rem; background: var(--paper-warm); border-radius: 6px; }
 .mood-score-display { font-size: 2rem; font-weight: bold; color: var(--accent); }
+.emotion-tags-display { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.6rem; }
+.emotion-hashtag {
+  display: inline-block;
+  padding: 0.2rem 0.65rem;
+  background: var(--paper-warm);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  font-size: 0.80rem;
+  color: var(--accent);
+}
 
 /* Calendar */
 .calendar-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
@@ -554,6 +567,7 @@ body {
   padding: 1rem 1.4rem;
   overflow-y: auto;
   background: var(--paper);
+  font-family: 'Mona12', 'Courier New', monospace;
   font-size: 14px;
   line-height: 1.75;
   word-break: break-word;
@@ -652,6 +666,8 @@ body {
 
   /* Home layout */
   .home-layout { grid-template-columns: 1fr; gap: 1.5rem; }
+  .home-notes { padding-right: 0; border-right: none; border-bottom: 1px solid var(--line); padding-bottom: 1.5rem; }
+  .home-pulse { padding-left: 0; }
 
   /* Studio */
   .project-grid { grid-template-columns: 1fr; }

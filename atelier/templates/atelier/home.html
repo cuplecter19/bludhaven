@@ -24,18 +24,32 @@
       <div class="today-mood">
         <span class="mood-score-display">{{ today_mood.mood_score }}/10</span>
         {% if today_mood.emotion_tags %}
-          <p class="emotion-tags-display">{{ today_mood.emotion_tags|cut:";" }}</p>
+          <div class="emotion-tags-display" data-tags="{{ today_mood.emotion_tags }}"></div>
         {% endif %}
       </div>
     {% else %}
       <p class="pulse-prompt">오늘 기분은 어때요?</p>
       <a class="btn btn-primary" href="{% url 'atelier:pulse_checkin' %}">기분 기록하기</a>
     {% endif %}
+    <div style="margin-top: 1.2rem;">
+      <a class="btn btn-secondary" href="{% url 'atelier:pulse_phq9' %}">PHQ-9 기록하기</a>
+    </div>
   </section>
 </div>
 
 <div class="home-actions">
   <a class="btn btn-primary" href="{% url 'atelier:spark_new' %}">새 메모 쓰기</a>
-  <a class="btn btn-secondary" href="{% url 'atelier:pulse_phq9' %}">PHQ-9 기록하기</a>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const container = document.querySelector('.emotion-tags-display');
+  if (!container) return;
+  const raw = container.dataset.tags || '';
+  const tags = raw.split(';').map(t => t.trim()).filter(Boolean);
+  container.innerHTML = tags.map(t => `<span class="emotion-hashtag">#${t}</span>`).join('');
+})();
+</script>
 {% endblock %}

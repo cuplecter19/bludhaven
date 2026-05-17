@@ -388,14 +388,14 @@ def spark_export(request, note_id):
 # Studio page views
 # ---------------------------------------------------------------------------
 
-# Colour palette offered on the project creation form (higher-saturation tones)
+# Colour palette offered on the project creation form — Pantone Colour of the Year references
 PROJECT_COLORS = [
-    '#c8973a',  # warm amber
-    '#4a7a8a',  # teal-slate
-    '#8a4a72',  # plum
-    '#3a7a5a',  # forest green
-    '#a07010',  # deep gold
-    '#7a3a6a',  # berry
+    '#FFBE98',  # Peach Fuzz (2024)
+    '#BB2649',  # Viva Magenta (2023)
+    '#6667AB',  # Very Peri (2022)
+    '#FF6F61',  # Living Coral (2019)
+    '#88B04B',  # Greenery (2017)
+    '#AD5E99',  # Radiant Orchid (2014)
 ]
 
 

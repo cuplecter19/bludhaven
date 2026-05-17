@@ -13,6 +13,7 @@
   <div class="editor-header-actions">
     <a id="note-export-link" class="btn btn-ghost" href="#" style="visibility:hidden;">↓ .md</a>
     <span id="save-indicator" class="save-indicator"></span>
+    <button id="publish-btn" class="btn btn-primary" onclick="handlePublish()">게시</button>
   </div>
 </div>
 
@@ -38,4 +39,18 @@
 </div>
 
 <div id="autocomplete-dropdown" class="autocomplete-dropdown hidden"></div>
+
+<script>
+async function handlePublish() {
+  const body = document.getElementById('note-body');
+  if (!body || !body.value.trim()) {
+    alert('메모 내용을 입력해주세요.');
+    return;
+  }
+  if (typeof window.__saveNote === 'function') {
+    await window.__saveNote();
+  }
+  window.location.href = '{% url "atelier:spark_list" %}';
+}
+</script>
 {% endblock %}
