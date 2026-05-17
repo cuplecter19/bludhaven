@@ -1,0 +1,61 @@
+{% extends "atelier/base.html" %}
+{% load static %}
+
+{% block title %}PHQ-9 — Pulse{% endblock %}
+
+{% block content %}
+<div class="phq9-layout">
+  <a class="back-link" href="{% url 'atelier:pulse_home' %}">← Pulse</a>
+  <h2>PHQ-9 자가 평가</h2>
+  <p class="phq9-intro">지난 2주 동안 다음 문제들로 얼마나 자주 방해를 받았나요?</p>
+
+  <form id="phq9-form" class="phq9-form">
+    <div class="phq9-questions">
+      {% for q_data in phq9_questions %}
+      <div class="phq9-question" data-q="{{ forloop.counter }}">
+        <p>{{ forloop.counter }}. {{ q_data }}</p>
+        <div class="radio-group">
+          <label><input type="radio" name="q{{ forloop.counter }}" value="0"> 0</label>
+          <label><input type="radio" name="q{{ forloop.counter }}" value="1"> 1</label>
+          <label><input type="radio" name="q{{ forloop.counter }}" value="2"> 2</label>
+          <label><input type="radio" name="q{{ forloop.counter }}" value="3"> 3</label>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <p class="phq9-scale-hint">0 = 전혀 없었다 · 1 = 며칠 동안 · 2 = 7일 이상 · 3 = 거의 매일</p>
+    <textarea id="phq9-note" class="note-body-textarea small" placeholder="추가로 남기고 싶은 말 (선택)"></textarea>
+    <button type="submit" class="btn btn-primary">제출하기</button>
+  </form>
+
+  <div id="phq9-result" class="phq9-result hidden"></div>
+</div>
+
+<script>
+(function() {
+  document.getElementById('phq9-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = { note: document.getElementById('phq9-note').value };
+    for (let i = 1; i <= 9; i++) {
+      const sel = document.querySelector(`input[name="q${i}"]:checked`);
+      if (!sel) { alert(`문항 ${i}에 답해주세요.`); return; }
+      payload[`q${i}`] = parseInt(sel.value);
+    }
+    const resp = await fetch('{% url "atelier:api_phq9_list" %}', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
+    });
+    const data = await resp.json();
+    if (resp.ok) {
+      const resultDiv = document.getElementById('phq9-result');
+      resultDiv.classList.remove('hidden');
+      resultDiv.innerHTML = `<p>총점: <strong>${data.total_score}</strong></p>` +
+        (data.show_crisis_info ? '<p class="crisis-info">⚠️ 전문가와 이야기해 보세요. 자살예방상담전화: 1393</p>' : '');
+      document.getElementById('phq9-form').classList.add('hidden');
+    }
+  });
+})();
+</script>
+{% endblock %}

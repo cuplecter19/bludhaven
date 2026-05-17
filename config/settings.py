@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'shop',
     'scheduler',
     'phrases',
+    'atelier',
 ]
 
 MIDDLEWARE = [

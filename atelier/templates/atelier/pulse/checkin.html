@@ -1,0 +1,74 @@
+{% extends "atelier/base.html" %}
+{% load static %}
+
+{% block title %}기분 기록 — Pulse{% endblock %}
+
+{% block content %}
+<div class="checkin-layout">
+  <a class="back-link" href="{% url 'atelier:pulse_home' %}">← Pulse</a>
+  <h2>오늘 기분은 어때요?</h2>
+
+  <div class="slider-group">
+    <label for="mood-slider">기분 <span id="mood-val">5</span></label>
+    <input id="mood-slider" class="mood-slider" type="range" min="1" max="10" value="5">
+  </div>
+
+  <div class="slider-group">
+    <label for="energy-slider">에너지 <span id="energy-val">5</span> <small>(선택)</small></label>
+    <input id="energy-slider" class="mood-slider" type="range" min="1" max="10" value="5">
+  </div>
+
+  <div class="emotion-tags-group">
+    <p>감정 태그 (선택)</p>
+    <div class="emotion-tag-buttons">
+      {% for tag in emotion_tags %}
+      <button class="emotion-tag-btn" data-tag="{{ tag }}">{{ tag }}</button>
+      {% endfor %}
+    </div>
+  </div>
+
+  <textarea id="checkin-note" class="note-body-textarea small" placeholder="더 하고 싶은 말이 있나요? (선택)"></textarea>
+
+  <button id="submit-checkin" class="btn btn-primary">기록하기</button>
+  <p id="checkin-msg" class="checkin-msg"></p>
+</div>
+
+<script>
+(function() {
+  const moodSlider = document.getElementById('mood-slider');
+  const energySlider = document.getElementById('energy-slider');
+  const moodVal = document.getElementById('mood-val');
+  const energyVal = document.getElementById('energy-val');
+  moodSlider.addEventListener('input', () => moodVal.textContent = moodSlider.value);
+  energySlider.addEventListener('input', () => energyVal.textContent = energySlider.value);
+
+  const selectedTags = new Set();
+  document.querySelectorAll('.emotion-tag-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      btn.classList.toggle('selected');
+      if (selectedTags.has(btn.dataset.tag)) selectedTags.delete(btn.dataset.tag);
+      else selectedTags.add(btn.dataset.tag);
+    });
+  });
+
+  document.getElementById('submit-checkin').addEventListener('click', async () => {
+    const payload = {
+      mood_score: parseInt(moodSlider.value),
+      energy_score: parseInt(energySlider.value),
+      emotion_tags: [...selectedTags].join(';'),
+      note: document.getElementById('checkin-note').value,
+    };
+    const resp = await fetch('{% url "atelier:api_mood_list" %}', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
+    });
+    if (resp.ok) {
+      window.location.href = '{% url "atelier:pulse_home" %}';
+    } else {
+      document.getElementById('checkin-msg').textContent = '저장에 실패했어요. 다시 시도해 주세요.';
+    }
+  });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "atelier/base.html" %}
+{% load static %}
+
+{% block title %}Pulse — 기분 달력{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'atelier/js/pulse_chart.js' %}" defer></script>
+{% endblock %}
+
+{% block content %}
+<div class="pulse-header">
+  <h2>Pulse</h2>
+  <div class="pulse-actions">
+    <a class="btn btn-primary" href="{% url 'atelier:pulse_checkin' %}">기분 기록</a>
+    <a class="btn btn-secondary" href="{% url 'atelier:pulse_phq9' %}">PHQ-9</a>
+  </div>
+</div>
+
+<div class="calendar-nav">
+  <button id="prev-month" class="btn-ghost">‹ 이전 달</button>
+  <span id="calendar-title" class="calendar-title"></span>
+  <button id="next-month" class="btn-ghost">다음 달 ›</button>
+</div>
+
+<div id="calendar-grid" class="calendar-grid">
+  <!-- Filled by pulse_chart.js -->
+</div>
+
+<div id="trend-chart" class="trend-chart" aria-label="기분 트렌드 차트"></div>
+{% endblock %}
