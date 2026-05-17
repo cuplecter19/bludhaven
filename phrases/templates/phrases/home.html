@@ -5,6 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PHRASES | Blüdhaven</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="{% static 'phrases/css/phrases_base.css' %}">
   <link rel="stylesheet" href="{% static 'phrases/css/home.css' %}">
 </head>
@@ -48,17 +49,17 @@
 
     <div class="action-row">
       <a href="{% url 'phrases:cloze' %}" class="action-btn">
-        <span class="a-icon">✏️</span>
+        <span class="a-icon"><i class="fa-solid fa-pencil"></i></span>
         <span class="a-title">Cloze</span>
         <span class="a-desc">빈칸 채우기</span>
       </a>
       <a href="{% url 'phrases:scramble' %}" class="action-btn">
-        <span class="a-icon">🔀</span>
+        <span class="a-icon"><i class="fa-solid fa-shuffle"></i></span>
         <span class="a-title">Scramble</span>
         <span class="a-desc">어순 배열</span>
       </a>
       <a href="{% url 'phrases:stats' %}" class="action-btn">
-        <span class="a-icon">📊</span>
+        <span class="a-icon"><i class="fa-solid fa-chart-column"></i></span>
         <span class="a-title">Stats</span>
         <span class="a-desc">학습 통계</span>
       </a>

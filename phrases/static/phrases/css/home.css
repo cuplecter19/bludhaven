@@ -48,7 +48,7 @@
 .action-btn .a-icon { font-size: 2rem; margin-bottom: 0.75rem; }
 
 .action-btn .a-title {
-  font-family: 'ClassyVogue'; font-size: 0.95rem; letter-spacing: 2px;
+  font-family: 'Inter', sans-serif; font-size: 0.95rem; letter-spacing: 2px;
   text-transform: uppercase; margin-bottom: 0.3rem;
 }
 

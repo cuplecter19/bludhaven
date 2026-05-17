@@ -28,6 +28,7 @@ body {
 }
 .logo {
   font-family: 'ClassyVogue', serif;
+  font-weight: 700;
   font-size: 1.4rem;
   letter-spacing: 0.04em;
   color: var(--ink);
@@ -42,7 +43,7 @@ body {
 }
 .nav-brand {
   font-size: 1.3rem;
-  font-weight: bold;
+  font-weight: 700;
   font-family: 'ClassyVogue', serif;
   color: var(--ink);
   text-decoration: none;

@@ -223,7 +223,6 @@ input[type="password"]::placeholder {
   letter-spacing: 2px;
   cursor: pointer;
   transition: background 0.25s;
-  margin-top: 0.5rem;
 }
 .btn-submit:hover { background: var(--accent); }
 
