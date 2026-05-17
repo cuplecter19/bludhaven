@@ -55,15 +55,15 @@
         </div>
       </div>
 
-      <!-- Log list -->
+      <!-- Log list (active only) -->
       <ul class="goallog-list" id="goallog-list">
-        {% for log in goal_logs %}
-        <li class="goallog-item {% if log.is_done %}is-done{% endif %}" data-log-id="{{ log.id }}">
+        {% for log in active_logs %}
+        <li class="goallog-item" data-log-id="{{ log.id }}">
           <div class="goallog-item-top">
-            <button type="button" class="goallog-done-btn {% if log.is_done %}checked{% endif %}" data-log-id="{{ log.id }}" title="완료 토글">{% if log.is_done %}✓{% else %}○{% endif %}</button>
+            <button type="button" class="goallog-done-btn" data-log-id="{{ log.id }}" title="완료 토글"><i class="far fa-circle"></i></button>
             <span class="goallog-type-badge goallog-type-{{ log.log_type }}">{{ log.get_log_type_display }}</span>
             <time class="goallog-date">{{ log.logged_at|date:"m.d" }}</time>
-            <button type="button" class="goallog-delete-btn" data-log-id="{{ log.id }}" title="삭제">✕</button>
+            <button type="button" class="goallog-delete-btn" data-log-id="{{ log.id }}" title="삭제"><i class="fas fa-trash-alt"></i></button>
           </div>
           <p class="goallog-body">{{ log.body }}</p>
         </li>
@@ -81,6 +81,21 @@
         <span id="done-toggle-icon">▶</span> 완료된 것들
       </button>
       <div id="done-content" class="done-content" hidden>
+        <ul class="goallog-list goallog-done-list" id="goallog-done-list">
+          {% for log in done_logs %}
+          <li class="goallog-item is-done" data-log-id="{{ log.id }}">
+            <div class="goallog-item-top">
+              <button type="button" class="goallog-done-btn checked" data-log-id="{{ log.id }}" title="완료 토글"><i class="fas fa-check-circle"></i></button>
+              <span class="goallog-type-badge goallog-type-{{ log.log_type }}">{{ log.get_log_type_display }}</span>
+              <time class="goallog-date">{{ log.logged_at|date:"m.d" }}</time>
+              <button type="button" class="goallog-delete-btn" data-log-id="{{ log.id }}" title="삭제"><i class="fas fa-trash-alt"></i></button>
+            </div>
+            <p class="goallog-body">{{ log.body }}</p>
+          </li>
+          {% empty %}
+          <li class="goallog-empty" id="goallog-done-empty-hint">아직 완료된 기록이 없어요.</li>
+          {% endfor %}
+        </ul>
         <textarea id="completed-notes" class="focus-textarea autoresize" placeholder="마무리한 것들을 여기 옮겨두세요. 쌓일수록 기분이 좋아집니다.">{{ project.completed_notes|default:"" }}</textarea>
       </div>
     </section>
@@ -275,10 +290,10 @@
     const dateStr = log.logged_at.slice(5).replace('-', '.');  // mm.dd
     li.innerHTML = `
       <div class="goallog-item-top">
-        <button type="button" class="goallog-done-btn ${log.is_done ? 'checked' : ''}" data-log-id="${log.id}" title="완료 토글">${log.is_done ? '✓' : '○'}</button>
+        <button type="button" class="goallog-done-btn ${log.is_done ? 'checked' : ''}" data-log-id="${log.id}" title="완료 토글"><i class="${log.is_done ? 'fas fa-check-circle' : 'far fa-circle'}"></i></button>
         <span class="goallog-type-badge goallog-type-${escapeHtml(log.log_type)}">${escapeHtml(logTypeLabel(log.log_type))}</span>
         <time class="goallog-date">${escapeHtml(dateStr)}</time>
-        <button type="button" class="goallog-delete-btn" data-log-id="${log.id}" title="삭제">✕</button>
+        <button type="button" class="goallog-delete-btn" data-log-id="${log.id}" title="삭제"><i class="fas fa-trash-alt"></i></button>
       </div>
       <p class="goallog-body">${escapeHtml(log.body)}</p>`;
     list.prepend(li);
@@ -289,6 +304,17 @@
     const logId = li.dataset.logId;
     li.querySelector('.goallog-done-btn')?.addEventListener('click', () => toggleDone(li, logId));
     li.querySelector('.goallog-delete-btn')?.addEventListener('click', () => deleteLog(li, logId));
+  }
+
+  function refreshEmptyHint(listEl, hintId, hintText) {
+    document.getElementById(hintId)?.remove();
+    if (!listEl.querySelector('.goallog-item')) {
+      const hint = document.createElement('li');
+      hint.id = hintId;
+      hint.className = 'goallog-empty';
+      hint.textContent = hintText;
+      listEl.appendChild(hint);
+    }
   }
 
   async function toggleDone(li, logId) {
@@ -303,7 +329,21 @@
         li.classList.toggle('is-done', isDone);
         const btn = li.querySelector('.goallog-done-btn');
         btn.classList.toggle('checked', isDone);
-        btn.textContent = isDone ? '✓' : '○';
+        btn.innerHTML = isDone ? '<i class="fas fa-check-circle"></i>' : '<i class="far fa-circle"></i>';
+
+        const doneList = document.getElementById('goallog-done-list');
+        const activeList = document.getElementById('goallog-list');
+
+        if (isDone) {
+          document.getElementById('goallog-done-empty-hint')?.remove();
+          doneList.appendChild(li);
+          setDoneOpen(true);
+          refreshEmptyHint(activeList, 'goallog-empty-hint', '아직 기록이 없어요. 오늘 한 것을 남겨보세요.');
+        } else {
+          document.getElementById('goallog-empty-hint')?.remove();
+          activeList.prepend(li);
+          refreshEmptyHint(doneList, 'goallog-done-empty-hint', '아직 완료된 기록이 없어요.');
+        }
       }
     } catch (err) {
       console.error('[studio_detail] toggle done failed:', err);
@@ -317,13 +357,12 @@
         headers: { 'X-CSRFToken': getCsrfToken() },
       });
       if (resp.ok || resp.status === 204) {
+        const isDone = li.classList.contains('is-done');
         li.remove();
-        if (!document.querySelector('#goallog-list .goallog-item')) {
-          const hint = document.createElement('li');
-          hint.id = 'goallog-empty-hint';
-          hint.className = 'goallog-empty';
-          hint.textContent = '아직 기록이 없어요. 오늘 한 것을 남겨보세요.';
-          document.getElementById('goallog-list').appendChild(hint);
+        if (isDone) {
+          refreshEmptyHint(document.getElementById('goallog-done-list'), 'goallog-done-empty-hint', '아직 완료된 기록이 없어요.');
+        } else {
+          refreshEmptyHint(document.getElementById('goallog-list'), 'goallog-empty-hint', '아직 기록이 없어요. 오늘 한 것을 남겨보세요.');
         }
       }
     } catch (err) {
