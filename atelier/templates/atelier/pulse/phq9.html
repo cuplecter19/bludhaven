@@ -61,7 +61,7 @@
       const resultDiv = document.getElementById('phq9-result');
       resultDiv.classList.remove('hidden');
       resultDiv.innerHTML = `<p>총점: <strong>${data.total_score}</strong></p>` +
-        (data.show_crisis_info ? '<p class="crisis-info">⚠️ 전문가와 이야기해 보세요. 자살예방상담전화: 1393</p>' : '');
+        (data.show_crisis_info ? '<p class="crisis-info">⚠️ 전문가와 이야기해 보세요.</p>' : '');
       document.getElementById('phq9-form').classList.add('hidden');
     }
   });
