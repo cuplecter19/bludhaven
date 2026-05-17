@@ -53,8 +53,7 @@
       </button>
       <div id="done-content" class="done-content" hidden>
         <textarea id="completed-notes" class="focus-textarea autoresize" placeholder="마무리한 것들을 여기 옮겨두세요. 쌓일수록 기분이 좋아집니다.">{{ project.completed_notes|default:"" }}</textarea>
-      </div>
-    </section>
+      </div>    </section>
 
     <!-- Save indicator -->
     <span id="save-indicator" class="save-indicator"></span>
@@ -171,7 +170,7 @@
   });
   if (document.getElementById('completed-notes')) {
     document.getElementById('completed-notes').addEventListener('input', function() {
-      // completed_notes is stored in next_steps for now; adjust if model changes
+      scheduleSave({ completed_notes: this.value });
     });
   }
 
@@ -183,6 +182,7 @@
       saveProject({
         current_focus: document.getElementById('current-focus').value,
         next_steps: document.getElementById('next-steps').value,
+        completed_notes: document.getElementById('completed-notes') ? document.getElementById('completed-notes').value : undefined,
       });
     }
   });

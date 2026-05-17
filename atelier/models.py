@@ -142,6 +142,7 @@ class Project(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
     current_focus = models.TextField(null=True, blank=True)
     next_steps = models.TextField(null=True, blank=True)
+    completed_notes = models.TextField(null=True, blank=True)
     color_hex = models.CharField(max_length=7, default='#c8a96e')
     sort_order = models.SmallIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)

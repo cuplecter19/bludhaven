@@ -123,6 +123,7 @@ def get_project_dict(project) -> dict:
         'status': project.status,
         'current_focus': project.current_focus or '',
         'next_steps': project.next_steps or '',
+        'completed_notes': project.completed_notes or '',
         'color_hex': project.color_hex,
         'sort_order': project.sort_order,
         'note_count': project.project_notes.count(),

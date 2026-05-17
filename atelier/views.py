@@ -26,7 +26,7 @@ def _note_to_dict(note, preview_len=80):
     return {
         'id': note.id,
         'title': note.title or '',
-        'body_preview': note.body[:preview_len],  # safe: Python slicing handles short strings
+        'body_preview': note.body[:preview_len],  # safe: Python slicing is no-op when len < preview_len
         'tag': {'id': note.tag.id, 'name': note.tag.name, 'name_ko': note.tag.name_ko} if note.tag else None,
         'is_pinned': note.is_pinned,
         'created_at': note.created_at.isoformat(),
@@ -455,7 +455,8 @@ def api_project_detail(request, project_id):
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
 
-        updatable = ('title', 'description', 'status', 'current_focus', 'next_steps', 'color_hex', 'sort_order')
+        updatable = ('title', 'description', 'status', 'current_focus', 'next_steps',
+                     'completed_notes', 'color_hex', 'sort_order')
         for field in updatable:
             if field in data:
                 setattr(project, field, data[field])
