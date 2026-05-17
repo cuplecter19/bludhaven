@@ -1,7 +1,7 @@
 import json
 
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -353,6 +353,35 @@ def api_pulse_trend(request):
         days = 30
     data = get_mood_trend(request.user, days)
     return JsonResponse({'data': data})
+
+
+@login_required
+def api_phq9_trend(request):
+    """Return up to last 20 PHQ-9 scores in chronological order for trend chart."""
+    logs = (
+        PHQ9Log.objects
+        .filter(user=request.user)
+        .order_by('logged_at', 'created_at')
+        .values('logged_at', 'created_at', 'total_score')[:20]
+    )
+    data = [{'logged_at': str(l['logged_at']), 'total_score': l['total_score']} for l in logs]
+    return JsonResponse({'data': data})
+
+
+@login_required
+def spark_export(request, note_id):
+    """Download a single note as a .md file."""
+    note = get_object_or_404(Note, id=note_id, user=request.user)
+    lines = []
+    if note.title:
+        lines.append(f'# {note.title}\n\n')
+    lines.append(note.body)
+    content = ''.join(lines)
+    safe_title = (note.title or f'note-{note.id}').replace('/', '-').replace('\\', '-')
+    filename = f'{safe_title}.md'
+    response = HttpResponse(content, content_type='text/markdown; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
 
 
 # ---------------------------------------------------------------------------

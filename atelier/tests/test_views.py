@@ -412,3 +412,91 @@ class ProjectAPITest(TestCase):
         self.project.refresh_from_db()
         self.assertEqual(p2.sort_order, 0)
         self.assertEqual(self.project.sort_order, 1)
+
+
+# ---------------------------------------------------------------------------
+# Stage 5 tests
+# ---------------------------------------------------------------------------
+
+class SparkExportTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user = make_user('exportuser')
+        self.client.login(username='exportuser', password='test')
+        self.note = Note.objects.create(
+            user=self.user,
+            title='My Note',
+            body='# Hello\n\nWorld',
+        )
+
+    def test_export_requires_login(self):
+        self.client.logout()
+        resp = self.client.get(reverse('atelier:spark_export', args=[self.note.id]))
+        self.assertEqual(resp.status_code, 302)
+
+    def test_export_returns_md_file(self):
+        resp = self.client.get(reverse('atelier:spark_export', args=[self.note.id]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn('text/markdown', resp['Content-Type'])
+        self.assertIn('attachment', resp['Content-Disposition'])
+        self.assertIn('.md', resp['Content-Disposition'])
+
+    def test_export_content_includes_title_and_body(self):
+        resp = self.client.get(reverse('atelier:spark_export', args=[self.note.id]))
+        content = resp.content.decode('utf-8')
+        self.assertIn('My Note', content)
+        self.assertIn('# Hello', content)
+        self.assertIn('World', content)
+
+    def test_export_note_without_title(self):
+        note = Note.objects.create(user=self.user, body='Just a body')
+        resp = self.client.get(reverse('atelier:spark_export', args=[note.id]))
+        self.assertEqual(resp.status_code, 200)
+        content = resp.content.decode('utf-8')
+        self.assertIn('Just a body', content)
+
+    def test_export_other_user_returns_404(self):
+        other = make_user('other_export')
+        other_note = Note.objects.create(user=other, body='secret')
+        resp = self.client.get(reverse('atelier:spark_export', args=[other_note.id]))
+        self.assertEqual(resp.status_code, 404)
+
+
+class PHQ9TrendAPITest(TestCase):
+    def setUp(self):
+        from atelier.models import PHQ9Log
+        self.client = Client()
+        self.user = make_user('phq9trend')
+        self.client.login(username='phq9trend', password='test')
+        # Create two PHQ9 logs
+        PHQ9Log.objects.create(
+            user=self.user, q1=1, q2=1, q3=1, q4=1, q5=1,
+            q6=1, q7=1, q8=1, q9=0, total_score=8,
+        )
+        PHQ9Log.objects.create(
+            user=self.user, q1=2, q2=2, q3=2, q4=2, q5=2,
+            q6=2, q7=2, q8=2, q9=0, total_score=16,
+        )
+
+    def test_phq9_trend_requires_login(self):
+        self.client.logout()
+        resp = self.client.get(reverse('atelier:api_phq9_trend'))
+        self.assertEqual(resp.status_code, 302)
+
+    def test_phq9_trend_returns_data(self):
+        resp = self.client.get(reverse('atelier:api_phq9_trend'))
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIn('data', data)
+        self.assertEqual(len(data['data']), 2)
+
+    def test_phq9_trend_fields(self):
+        resp = self.client.get(reverse('atelier:api_phq9_trend'))
+        item = resp.json()['data'][0]
+        self.assertIn('logged_at', item)
+        self.assertIn('total_score', item)
+
+    def test_phq9_trend_chronological_order(self):
+        resp = self.client.get(reverse('atelier:api_phq9_trend'))
+        scores = [d['total_score'] for d in resp.json()['data']]
+        self.assertEqual(scores, sorted(scores))

@@ -1,6 +1,5 @@
 /**
- * pulse_chart.js — Calendar grid and mood trend chart
- * Reads window.__PULSE_TREND__ or fetches from /atelier/api/pulse/trend/
+ * pulse_chart.js — Calendar grid, mood trend chart, PHQ-9 trend chart
  */
 (function () {
   const calendarGrid = document.getElementById('calendar-grid');
@@ -8,29 +7,29 @@
   const prevBtn = document.getElementById('prev-month');
   const nextBtn = document.getElementById('next-month');
   const trendChart = document.getElementById('trend-chart');
+  const phq9Chart = document.getElementById('phq9-trend-chart');
 
   if (!calendarGrid) return;
 
   const now = new Date();
   let currentYear = now.getFullYear();
-  let currentMonth = now.getMonth() + 1; // 1-based
+  let currentMonth = now.getMonth() + 1;
 
   async function fetchCalendar(year, month) {
-    const resp = await fetch(`/atelier/api/pulse/calendar/?year=${year}&month=${month}`);
+    const resp = await fetch('/atelier/api/pulse/calendar/?year=' + year + '&month=' + month);
     return resp.json();
   }
 
   async function renderCalendar(year, month) {
-    calendarTitle.textContent = `${year}년 ${month}월`;
+    calendarTitle.textContent = year + '년 ' + month + '월';
     calendarGrid.innerHTML = '';
 
     const data = await fetchCalendar(year, month);
     const dayMap = {};
-    (data.days || []).forEach(d => { dayMap[d.date] = d; });
+    (data.days || []).forEach(function(d) { dayMap[d.date] = d; });
 
-    // Day headers
-    ['일', '월', '화', '수', '목', '금', '토'].forEach(d => {
-      const cell = document.createElement('div');
+    ['일', '월', '화', '수', '목', '금', '토'].forEach(function(d) {
+      var cell = document.createElement('div');
       cell.className = 'calendar-cell';
       cell.style.fontWeight = 'bold';
       cell.style.background = 'transparent';
@@ -38,37 +37,37 @@
       calendarGrid.appendChild(cell);
     });
 
-    const firstDay = new Date(year, month - 1, 1).getDay();
-    const daysInMonth = new Date(year, month, 0).getDate();
+    var firstDay = new Date(year, month - 1, 1).getDay();
+    var daysInMonth = new Date(year, month, 0).getDate();
 
-    for (let i = 0; i < firstDay; i++) {
-      const empty = document.createElement('div');
+    for (var i = 0; i < firstDay; i++) {
+      var empty = document.createElement('div');
       empty.className = 'calendar-cell';
       empty.style.background = 'transparent';
       calendarGrid.appendChild(empty);
     }
 
-    for (let d = 1; d <= daysInMonth; d++) {
-      const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-      const cell = document.createElement('div');
+    for (var d = 1; d <= daysInMonth; d++) {
+      var dateStr = year + '-' + String(month).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+      var cell = document.createElement('div');
       cell.className = 'calendar-cell';
       cell.textContent = d;
       if (dayMap[dateStr]) {
-        const dot = document.createElement('div');
-        dot.className = `mood-dot ${dayMap[dateStr].level}`;
+        var dot = document.createElement('div');
+        dot.className = 'mood-dot ' + dayMap[dateStr].level;
         cell.appendChild(dot);
       }
       calendarGrid.appendChild(cell);
     }
   }
 
-  if (prevBtn) prevBtn.addEventListener('click', () => {
+  if (prevBtn) prevBtn.addEventListener('click', function() {
     currentMonth--;
     if (currentMonth < 1) { currentMonth = 12; currentYear--; }
     renderCalendar(currentYear, currentMonth);
   });
 
-  if (nextBtn) nextBtn.addEventListener('click', () => {
+  if (nextBtn) nextBtn.addEventListener('click', function() {
     currentMonth++;
     if (currentMonth > 12) { currentMonth = 1; currentYear++; }
     renderCalendar(currentYear, currentMonth);
@@ -76,46 +75,108 @@
 
   renderCalendar(currentYear, currentMonth);
 
-  // Trend chart
-  async function renderTrend() {
-    if (!trendChart) return;
-    let trendData = window.__PULSE_TREND__;
-    if (!trendData) {
-      const resp = await fetch('/atelier/api/pulse/trend/?days=30');
-      const json = await resp.json();
-      trendData = json.data || [];
-    }
-    if (!trendData.length) {
-      trendChart.textContent = '최근 30일 데이터가 없어요.';
+  // ---------------------------------------------------------------------------
+  // Generic SVG bar chart helper
+  // ---------------------------------------------------------------------------
+
+  function buildBarChart(container, dataPoints, getVal, maxVal, colorFn, emptyMsg) {
+    if (!container) return;
+    if (!dataPoints || !dataPoints.length) {
+      container.textContent = emptyMsg;
       return;
     }
-    const max = 10;
-    const width = trendChart.clientWidth || 400;
-    const height = 100;
-    const barW = Math.max(4, Math.floor((width - 20) / trendData.length) - 2);
+    var width = container.clientWidth || 400;
+    var height = 100;
+    var barW = Math.max(4, Math.floor((width - 20) / dataPoints.length) - 2);
 
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('width', '100%');
     svg.setAttribute('height', height + 20);
-    svg.setAttribute('viewBox', `0 0 ${width} ${height + 20}`);
+    svg.setAttribute('viewBox', '0 0 ' + width + ' ' + (height + 20));
 
-    trendData.forEach((d, i) => {
-      const x = 10 + i * (barW + 2);
-      const barHeight = Math.round((d.mood_score / max) * height);
-      const y = height - barHeight;
-      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    dataPoints.forEach(function(d, i) {
+      var x = 10 + i * (barW + 2);
+      var val = getVal(d);
+      var barHeight = Math.max(2, Math.round((val / maxVal) * height));
+      var y = height - barHeight;
+      var rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
       rect.setAttribute('x', x);
       rect.setAttribute('y', y);
       rect.setAttribute('width', barW);
       rect.setAttribute('height', barHeight);
-      rect.setAttribute('fill', d.mood_score > 6 ? '#4a7c59' : d.mood_score > 3 ? '#5a6a7a' : '#8b4a4a');
+      rect.setAttribute('fill', colorFn(val));
       rect.setAttribute('rx', 2);
+
+      // Tooltip via title element
+      var title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+      title.textContent = d.logged_at + ': ' + val;
+      rect.appendChild(title);
       svg.appendChild(rect);
     });
 
-    trendChart.innerHTML = '';
-    trendChart.appendChild(svg);
+    container.innerHTML = '';
+    container.appendChild(svg);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Mood trend chart (max 10)
+  // ---------------------------------------------------------------------------
+
+  async function renderTrend() {
+    if (!trendChart) return;
+    var trendData = window.__PULSE_TREND__;
+    if (!trendData) {
+      try {
+        var resp = await fetch('/atelier/api/pulse/trend/?days=30');
+        var json = await resp.json();
+        trendData = json.data || [];
+      } catch (e) {
+        trendData = [];
+      }
+    }
+    buildBarChart(
+      trendChart,
+      trendData,
+      function(d) { return d.mood_score; },
+      10,
+      function(v) { return v > 6 ? '#4a7c59' : v > 3 ? '#5a6a7a' : '#8b4a4a'; },
+      '최근 30일 데이터가 없어요.'
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // PHQ-9 trend chart (max 27)
+  // ---------------------------------------------------------------------------
+
+  // PHQ-9 severity colour: 0-4 minimal (#4a7c59), 5-9 mild (#a07010),
+  //   10-14 moderate (#5a6a7a), 15-19 mod-severe (#8b4a4a), 20-27 severe (#7a1a1a)
+  function phq9Color(v) {
+    if (v <= 4) return '#4a7c59';
+    if (v <= 9) return '#a07010';
+    if (v <= 14) return '#5a6a7a';
+    if (v <= 19) return '#8b4a4a';
+    return '#7a1a1a';
+  }
+
+  async function renderPhq9Trend() {
+    if (!phq9Chart) return;
+    try {
+      var resp = await fetch('/atelier/api/pulse/phq9-trend/');
+      var json = await resp.json();
+      var data = json.data || [];
+      buildBarChart(
+        phq9Chart,
+        data,
+        function(d) { return d.total_score; },
+        27,
+        phq9Color,
+        'PHQ-9 기록이 없어요.'
+      );
+    } catch (e) {
+      if (phq9Chart) phq9Chart.textContent = 'PHQ-9 데이터를 불러오지 못했어요.';
+    }
   }
 
   renderTrend();
+  renderPhq9Trend();
 })();

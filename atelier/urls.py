@@ -9,6 +9,7 @@ urlpatterns = [
     path('spark/', views.spark_list, name='spark_list'),
     path('spark/new/', views.spark_new, name='spark_new'),
     path('spark/<int:note_id>/', views.spark_detail, name='spark_detail'),
+    path('spark/<int:note_id>/export/', views.spark_export, name='spark_export'),
     path('pulse/', views.pulse_home, name='pulse_home'),
     path('pulse/checkin/', views.pulse_checkin, name='pulse_checkin'),
     path('pulse/phq9/', views.pulse_phq9, name='pulse_phq9'),
@@ -30,6 +31,7 @@ urlpatterns = [
     path('api/phq9/', views.api_phq9_list, name='api_phq9_list'),
     path('api/pulse/calendar/', views.api_pulse_calendar, name='api_pulse_calendar'),
     path('api/pulse/trend/', views.api_pulse_trend, name='api_pulse_trend'),
+    path('api/pulse/phq9-trend/', views.api_phq9_trend, name='api_phq9_trend'),
 
     # API endpoints — projects (Studio)
     path('api/projects/', views.api_projects_list, name='api_projects_list'),
