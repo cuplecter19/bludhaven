@@ -52,9 +52,14 @@
       var cell = document.createElement('div');
       cell.className = 'calendar-cell';
       cell.textContent = d;
-      if (dayMap[dateStr]) {
+    if (dayMap[dateStr]) {
         var dot = document.createElement('div');
         dot.className = 'mood-dot ' + dayMap[dateStr].level;
+        var rawTags = dayMap[dateStr].emotion_tags || '';
+        var tags = rawTags.split(';').map(function(t) { return t.trim(); }).filter(Boolean);
+        if (tags.length) {
+          dot.setAttribute('data-tooltip', tags.map(function(t) { return '#' + t; }).join(' '));
+        }
         cell.appendChild(dot);
       }
       calendarGrid.appendChild(cell);
@@ -79,20 +84,21 @@
   // Generic SVG bar chart helper
   // ---------------------------------------------------------------------------
 
-  function buildBarChart(container, dataPoints, getVal, maxVal, colorFn, emptyMsg) {
+  function buildBarChart(container, dataPoints, getVal, maxVal, colorFn, emptyMsg, getLabel) {
     if (!container) return;
     if (!dataPoints || !dataPoints.length) {
       container.textContent = emptyMsg;
       return;
     }
+    var labelArea = getLabel ? 35 : 20;
     var width = container.clientWidth || 400;
     var height = 100;
     var barW = Math.max(4, Math.floor((width - 20) / dataPoints.length) - 2);
 
     var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('width', '100%');
-    svg.setAttribute('height', height + 20);
-    svg.setAttribute('viewBox', '0 0 ' + width + ' ' + (height + 20));
+    svg.setAttribute('height', height + labelArea);
+    svg.setAttribute('viewBox', '0 0 ' + width + ' ' + (height + labelArea));
 
     dataPoints.forEach(function(d, i) {
       var x = 10 + i * (barW + 2);
@@ -112,6 +118,22 @@
       title.textContent = `${d.logged_at}: ${val}`;
       rect.appendChild(title);
       svg.appendChild(rect);
+
+      // Date label on X-axis
+      if (getLabel) {
+        var labelText = getLabel(d);
+        var tx = x + barW / 2;
+        var ty = height + 8;
+        var text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', tx);
+        text.setAttribute('y', ty);
+        text.setAttribute('font-size', '9');
+        text.setAttribute('fill', '#888');
+        text.setAttribute('text-anchor', 'end');
+        text.setAttribute('transform', 'rotate(-45,' + tx + ',' + ty + ')');
+        text.textContent = labelText;
+        svg.appendChild(text);
+      }
     });
 
     container.innerHTML = '';
@@ -140,7 +162,11 @@
       function(d) { return d.mood_score; },
       10,
       function(v) { return v > 6 ? '#4a7c59' : v > 3 ? '#5a6a7a' : '#8b4a4a'; },
-      '최근 30일 데이터가 없어요.'
+      '최근 30일 데이터가 없어요.',
+      function(d) {
+        var dt = new Date(d.logged_at);
+        return (dt.getMonth() + 1) + '/' + dt.getDate();
+      }
     );
   }
 
@@ -170,7 +196,11 @@
         function(d) { return d.total_score; },
         27,
         phq9Color,
-        'PHQ-9 기록이 없어요.'
+        'PHQ-9 기록이 없어요.',
+        function(d) {
+          var parts = d.logged_at.split('-');
+          return parseInt(parts[1]) + '/' + parseInt(parts[2]);
+        }
       );
     } catch (e) {
       if (phq9Chart) phq9Chart.textContent = 'PHQ-9 데이터를 불러오지 못했어요.';

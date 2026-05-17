@@ -272,6 +272,40 @@ body {
 /* Trend chart */
 .trend-chart { min-height: 120px; border: 1px solid var(--line); border-radius: 6px; padding: 1rem; margin-bottom: 2rem; }
 
+/* Trend chart box: wraps heading + legend + chart */
+.trend-chart-box { margin-top: 2rem; }
+.trend-chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+.trend-chart-header .pulse-section-heading { margin: 0; }
+.chart-legend { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
+.legend-item { display: flex; align-items: center; gap: 4px; font-size: 0.75rem; color: var(--ink-soft); }
+.legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+/* Calendar dot tooltip */
+.mood-dot[data-tooltip] { position: relative; cursor: default; }
+.mood-dot[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ink);
+  color: var(--paper);
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 20;
+}
+.mood-dot[data-tooltip]:hover::after { opacity: 1; }
+
 /* PHQ9 */
 .phq9-form { max-width: 640px; }
 .phq9-question { margin-bottom: 1.2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--line); }

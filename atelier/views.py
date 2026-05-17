@@ -65,7 +65,7 @@ def home(request):
     today_mood = MoodLog.objects.filter(
         user=request.user,
         logged_at__date=today,
-    ).first()
+    ).order_by('-logged_at').first()
     return render(request, 'atelier/home.html', {
         'notes': notes,
         'today_mood': today_mood,
