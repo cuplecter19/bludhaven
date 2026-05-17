@@ -553,7 +553,7 @@ body {
   border: none;
   border-radius: 0;
   background: var(--paper);
-  font-family: 'Courier New', 'Mona12', monospace;
+  font-family: 'Mona12', 'Courier New', monospace;
   font-size: 12px;
   line-height: 1.8;
   padding: 1rem;
@@ -577,7 +577,7 @@ body {
   background: var(--paper);
   font-family: 'Mona12', 'Courier New', monospace;
   font-size: 12px;
-  line-height: 1.75;
+  line-height: 1.8;
   word-break: break-word;
 }
 
