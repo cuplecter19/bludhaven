@@ -211,7 +211,7 @@ body {
 .slider-group { margin-bottom: 1.2rem; }
 
 .emotion-tag-buttons { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
-.emotion-tag-btn {
+.emotion-tag-btn, .behavior-tag-btn {
   padding: 0.3rem 0.8rem;
   border-radius: 20px;
   border: 1px solid var(--line);
@@ -220,7 +220,7 @@ body {
   font-size: 0.82rem;
   cursor: pointer;
 }
-.emotion-tag-btn.selected { background: var(--accent); color: var(--paper); border-color: var(--accent); }
+.emotion-tag-btn.selected, .behavior-tag-btn.selected { background: var(--accent); color: var(--paper); border-color: var(--accent); }
 
 .today-mood { padding: 1rem; background: var(--paper-warm); border-radius: 6px; }
 .mood-score-display { font-size: 2rem; font-weight: bold; color: var(--accent); }
