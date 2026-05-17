@@ -1,0 +1,244 @@
+/* ==========================================================
+   accounts/static/accounts/css/common.css
+   Shared variables, base styles, and layout primitives
+   for all accounts pages (login / signup / profile).
+   ========================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,300;0,400;0,600;1,300&family=Noto+Sans+KR:wght@300;400;500&display=swap');
+
+/* ── Design Tokens ──────────────────────────────────────── */
+:root {
+  /* Palette */
+  --bg:           #F2EDE4;   /* warm parchment */
+  --white:        #FEFEFB;   /* near-white card */
+  --navy:         #1A1A17;   /* deep ink */
+  --accent:       #3A5A28;   /* botanical forest green */
+  --earth:        #7B5E3A;   /* warm bark / gold */
+  --gray:         #766B62;   /* muted warm gray */
+  --line:         #CEC8BF;   /* light separator */
+  --border:       #BAB3A8;   /* input border */
+  --danger:       #7A1818;
+  --danger-bg:    #FDF0F0;
+  --danger-line:  #F0BABA;
+  --success-bg:   #EEF5EA;
+  --success-color:#1A481A;
+  --success-line: #B0D4A8;
+
+  /* Typography */
+  --font-serif: 'ClassyVogue', Georgia, 'Times New Roman', serif;
+  --font-sans:  'Noto Sans', 'Arial', sans-serif;
+  --font-ko:    'Mona12', 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif;
+}
+
+/* ── Reset ──────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── Body ───────────────────────────────────────────────── */
+body {
+  background-color: var(--bg);
+  font-family: var(--font-sans);
+  color: var(--navy);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Soft botanical radial blurs on background corners */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    radial-gradient(ellipse 700px 480px at 95% 4%,  rgba(58, 90, 40, 0.08) 0%, transparent 65%),
+    radial-gradient(ellipse 520px 680px at 4%  96%, rgba(123, 94, 58, 0.08) 0%, transparent 65%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Auth Card ──────────────────────────────────────────── */
+.auth-card {
+  background: var(--white);
+  width: 100%;
+  max-width: 500px;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 8px 48px rgba(26, 26, 23, 0.10);
+}
+
+/* ── Card Masthead ──────────────────────────────────────── */
+.auth-masthead {
+  padding: 2rem 3rem 1.75rem;
+  border-bottom: 2px solid var(--navy);
+}
+
+.masthead-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 1.4rem;
+}
+
+.brand {
+  font-family: var(--font-serif);
+  font-size: 0.65rem;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  color: var(--navy);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.brand:hover { color: var(--accent); }
+
+.issue-tag {
+  font-family: var(--font-sans);
+  font-size: 0.55rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--gray);
+}
+
+/* Large editorial headline */
+.auth-headline {
+  font-family: var(--font-serif);
+  font-size: 4rem;
+  line-height: 0.88;
+  letter-spacing: -1px;
+  color: var(--navy);
+  margin-bottom: 1.1rem;
+}
+
+/* Decorative botanical rule with ornament */
+.botanical-rule {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-bottom: 0.8rem;
+}
+.botanical-rule::before,
+.botanical-rule::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+.botanical-rule span {
+  font-size: 0.85rem;
+  color: var(--earth);
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* Korean tagline under headline */
+.auth-tagline {
+  font-family: var(--font-ko);
+  font-size: 0.78rem;
+  color: var(--gray);
+  font-weight: 300;
+  letter-spacing: 0.3px;
+}
+
+/* ── Form Body ──────────────────────────────────────────── */
+.auth-body {
+  padding: 2.25rem 3rem 2.5rem;
+}
+
+/* ── Messages ───────────────────────────────────────────── */
+.message-box {
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.82rem;
+  font-family: var(--font-ko);
+  line-height: 1.5;
+  border-left: 3px solid var(--navy);
+}
+.message-box.error {
+  border-left-color: var(--danger);
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+.message-box.success {
+  border-left-color: var(--accent);
+  color: var(--success-color);
+  background: var(--success-bg);
+}
+
+/* ── Form Elements ──────────────────────────────────────── */
+.form-group {
+  margin-bottom: 1.6rem;
+}
+
+.form-label {
+  display: block;
+  font-family: var(--font-ko);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--gray);
+  margin-bottom: 0.45rem;
+  font-weight: 500;
+}
+
+input[type="text"],
+input[type="password"] {
+  width: 100%;
+  padding: 0.75rem 0;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--navy);
+  font-family: var(--font-sans);
+  font-size: 0.92rem;
+  transition: border-color 0.25s;
+  outline: none;
+  border-radius: 0;
+}
+input[type="text"]:focus,
+input[type="password"]:focus {
+  border-bottom-color: var(--navy);
+}
+input[type="text"]::placeholder,
+input[type="password"]::placeholder {
+  color: var(--line);
+  font-size: 0.85rem;
+}
+
+/* ── Primary Submit Button ──────────────────────────────── */
+.btn-submit {
+  width: 100%;
+  padding: 1rem;
+  background: var(--navy);
+  color: var(--white);
+  border: none;
+  font-family: var(--font-ko);
+  font-weight: 500;
+  font-size: 0.78rem;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: background 0.25s;
+  margin-top: 0.5rem;
+}
+.btn-submit:hover { background: var(--accent); }
+
+/* ── Auth Footer ────────────────────────────────────────── */
+.auth-footer {
+  padding: 1.25rem 3rem;
+  border-top: 1px solid var(--line);
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--gray);
+  font-family: var(--font-ko);
+}
+.auth-footer a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+.auth-footer a:hover { text-decoration: underline; }

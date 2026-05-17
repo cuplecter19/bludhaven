@@ -5,70 +5,96 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PROFILE | BLUDHAVEN</title>
-    <link rel="stylesheet" href="{% static 'accounts/css/signup.css' %}">
+    <link rel="stylesheet" href="{% static 'accounts/css/common.css' %}">
+    <link rel="stylesheet" href="{% static 'accounts/css/profile.css' %}">
 </head>
 <body>
     <div class="auth-card">
-        <a href="{% url 'index' %}" class="brand">BLUDHAVEN</a>
-        <h2 class="auth-title">My Profile</h2>
-        <p class="auth-sub">프로필 정보를 수정하세요</p>
 
-        {% if messages %}
-            {% for message in messages %}
-                <div class="message-box {% if message.tags == 'success' %}success{% else %}error{% endif %}">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        {% endif %}
+        <!-- Editorial masthead -->
+        <div class="auth-masthead">
+            <div class="masthead-meta">
+                <a href="{% url 'index' %}" class="brand">Bludhaven</a>
+                <span class="issue-tag">Profile Studio</span>
+            </div>
+            <h1 class="auth-headline">My Profile</h1>
+            <div class="botanical-rule"><span>✾</span></div>
+            <p class="auth-tagline">프로필 정보를 수정하세요</p>
+        </div>
 
-        <form method="post" enctype="multipart/form-data">
-            {% csrf_token %}
+        <!-- Form body -->
+        <div class="auth-body">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="message-box {% if 'error' in message.tags %}error{% else %}success{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
 
-            <div class="form-group">
-                <label class="form-label">프로필 이미지</label>
-                <div class="profile-img-preview">
-                    {% if user.profile_image %}
-                        <img src="{{ user.profile_image.url }}" alt="profile">
-                        <div>
-                            <label class="delete-image-label">
-                                <input type="checkbox" name="delete_image"> 이미지 삭제
-                            </label>
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <!-- Profile image + basic info header -->
+                <div class="profile-header">
+                    <div class="profile-avatar">
+                        {% if user.profile_image %}
+                            <img src="{{ user.profile_image.url }}" alt="{{ user.nickname }}">
+                        {% else %}
+                            <div class="profile-avatar-placeholder">No<br>Photo</div>
+                        {% endif %}
+                    </div>
+                    <div class="profile-avatar-info">
+                        <div class="profile-nickname-display">{{ user.nickname }}</div>
+                        <div class="profile-points-display">
+                            {{ user.points|floatformat:"0" }}
+                            <small>PT</small>
                         </div>
-                    {% else %}
-                        <div class="profile-img-placeholder">No<br>Image</div>
-                    {% endif %}
+                        <div class="image-actions">
+                            <input type="file" name="profile_image" accept="image/*">
+                            {% if user.profile_image %}
+                                <label class="delete-image-label">
+                                    <input type="checkbox" name="delete_image"> 이미지 삭제
+                                </label>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
-                <input type="file" name="profile_image" accept="image/*">
-            </div>
 
-            <div class="form-group">
-                <label class="form-label">아이디</label>
-                <div class="form-info">{{ user.username }} <span style="color:var(--gray);font-size:0.75rem;">(변경 불가)</span></div>
-            </div>
+                <!-- Read-only username -->
+                <div class="form-group">
+                    <label class="form-label">아이디</label>
+                    <div class="form-info">
+                        {{ user.username }}
+                        <span class="readonly-note">변경 불가</span>
+                    </div>
+                </div>
 
-            <div class="form-group">
-                <label class="form-label">보유 포인트</label>
-                <div class="form-info"><span class="points-badge">🪙 {{ user.points }} PT</span></div>
-            </div>
+                <!-- Editable nickname -->
+                <div class="form-group">
+                    <label class="form-label" for="nickname">닉네임</label>
+                    <input type="text" id="nickname" name="nickname" value="{{ user.nickname }}" required>
+                </div>
 
-            <div class="form-group">
-                <label class="form-label" for="nickname">닉네임</label>
-                <input type="text" id="nickname" name="nickname" value="{{ user.nickname }}" required>
-            </div>
+                <!-- Theme select -->
+                <div class="form-group">
+                    <label class="form-label" for="theme">UI 테마</label>
+                    <select id="theme" name="theme_preference">
+                        <option value="default" {% if user.theme_preference == 'default' %}selected{% endif %}>Blüdhaven Night (Blue)</option>
+                        <option value="dark" {% if user.theme_preference == 'dark' %}selected{% endif %}>Gotham Shadows (Black)</option>
+                    </select>
+                </div>
 
-            <div class="form-group">
-                <label class="form-label" for="theme">UI 테마</label>
-                <select id="theme" name="theme_preference">
-                    <option value="default" {% if user.theme_preference == 'default' %}selected{% endif %}>Blüdhaven Night (Blue)</option>
-                    <option value="dark" {% if user.theme_preference == 'dark' %}selected{% endif %}>Gotham Shadows (Black)</option>
-                </select>
-            </div>
+                <div class="btn-group">
+                    <button type="submit" class="btn-submit btn-grow">저장</button>
+                    <a href="{% url 'index' %}" class="btn-cancel">취소</a>
+                </div>
+            </form>
+        </div>
 
-            <div class="btn-group">
-                <button type="submit" class="btn-submit btn-submit--grow">저장</button>
-                <a href="{% url 'index' %}" class="btn-cancel">취소</a>
-            </div>
-        </form>
+        <!-- Footer nav -->
+        <p class="auth-footer"><a href="{% url 'index' %}">← 홈으로 돌아가기</a></p>
+
     </div>
     <script>
     (async function() {
