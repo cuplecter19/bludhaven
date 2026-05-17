@@ -434,13 +434,14 @@ body {
 .project-detail-top {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 0.75rem;
   margin-bottom: 0.6rem;
   flex-wrap: wrap;
 }
 .project-detail-title { font-family: 'ClassyVogue', serif; font-size: 1.8rem; }
 .project-detail-desc { color: var(--ink-soft); font-size: 0.9rem; margin-top: 0.2rem; }
-.project-status-buttons { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+.project-status-buttons { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-left: auto; }
 .status-change-btn.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 
 /* Focus / next-steps sections */
@@ -698,3 +699,92 @@ body {
   .nav-links { gap: 0.6rem; }
   .project-detail-title { font-size: 1.4rem; }
 }
+
+/* ── GoalLog ─────────────────────────────────────────────────────────────── */
+
+.goallog-add-area { margin-bottom: 1.5rem; }
+.goallog-add-controls {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+  justify-content: flex-end;
+}
+.goallog-type-select {
+  padding: 0 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--paper-warm);
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-family: inherit;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23666'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+  padding-right: 1.8rem;
+}
+.goallog-type-select:focus { outline: none; border-color: var(--accent); }
+
+.goallog-list { list-style: none; }
+.goallog-item {
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.goallog-item.is-done .goallog-body { text-decoration: line-through; opacity: 0.6; }
+.goallog-item-top {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.3rem;
+}
+.goallog-done-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ink-soft);
+  padding: 0;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s;
+  flex-shrink: 0;
+}
+.goallog-done-btn:hover { color: var(--mood-good); }
+.goallog-done-btn.checked { color: var(--mood-good); }
+
+.goallog-type-badge {
+  font-size: 0.72rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 3px;
+  background: var(--line);
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.goallog-type-done { background: #d4edda; color: #2d6a4f; }
+.goallog-type-next { background: #d1ecf1; color: #2a6478; }
+.goallog-type-note { background: var(--line); color: var(--ink-soft); }
+
+.goallog-date { font-size: 0.75rem; color: var(--ink-soft); margin-left: auto; }
+
+.goallog-delete-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ink-soft);
+  padding: 0 0.2rem;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s;
+  flex-shrink: 0;
+}
+.goallog-delete-btn:hover { color: var(--mood-hard); }
+
+.goallog-body { font-size: 0.9rem; color: var(--ink); line-height: 1.65; }
+.goallog-empty { color: var(--ink-soft); font-size: 0.88rem; padding: 0.75rem 0; }
+
+.goallog-done-list { margin-bottom: 1rem; }
+.done-content .focus-textarea { margin-top: 0.75rem; }

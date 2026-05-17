@@ -441,7 +441,7 @@ def spark_export(request, note_id):
 # Studio page views
 # ---------------------------------------------------------------------------
 
-# Colour palette offered on the project creation form — Pantone Colour of the Year references
+# Colour palette offered on the project creation form — Pantone Colour of the Year references + extras
 PROJECT_COLORS = [
     '#FFBE98',  # Peach Fuzz (2024)
     '#BB2649',  # Viva Magenta (2023)
@@ -449,6 +449,14 @@ PROJECT_COLORS = [
     '#FF6F61',  # Living Coral (2019)
     '#88B04B',  # Greenery (2017)
     '#AD5E99',  # Radiant Orchid (2014)
+    '#5BB8E8',  # 맑은 파란색 (Clear Sky Blue)
+    '#B0B8C1',  # 연한 회색 (Soft Gray)
+    '#E8C547',  # Warm Amber/Gold
+    '#4ECDC4',  # Teal
+    '#2C5F8A',  # Deep Navy
+    '#8BC4A0',  # Sage Green
+    '#F4A7B9',  # Soft Pink
+    '#C8956C',  # Warm Terracotta
 ]
 
 
@@ -497,10 +505,14 @@ def studio_detail(request, project_id):
         ('done', '한 것'),
         ('next', '다음에 할 것'),
     ]
+    active_logs = [log for log in goal_logs if not log.is_done]
+    done_logs = [log for log in goal_logs if log.is_done]
     return render(request, 'atelier/studio/detail.html', {
         'project': project,
         'linked_notes': linked_notes,
         'goal_logs': goal_logs,
+        'active_logs': active_logs,
+        'done_logs': done_logs,
         'colors': PROJECT_COLORS,
         'project_statuses': project_statuses,
         'log_type_choices': log_type_choices,
