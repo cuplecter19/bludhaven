@@ -210,7 +210,7 @@ body {
 .mood-slider { width: 100%; margin: 0.5rem 0 1rem; }
 .slider-group { margin-bottom: 1.2rem; }
 
-.emotion-tag-buttons { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
+.emotion-tag-buttons, .behavior-tag-buttons { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
 .emotion-tag-btn, .behavior-tag-btn {
   padding: 0.3rem 0.8rem;
   border-radius: 20px;
@@ -234,6 +234,10 @@ body {
   font-size: 0.80rem;
   color: var(--accent);
 }
+
+.behavior-tags-group { margin-top: 1rem; }
+.behavior-tags-title { font-size: 0.9rem; color: var(--ink); margin-bottom: 0.5rem; }
+.behavior-tags-hint { font-size: 0.8rem; color: var(--ink-soft); margin-bottom: 0.3rem; }
 
 /* Calendar */
 .calendar-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
