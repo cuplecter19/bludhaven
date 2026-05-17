@@ -1,0 +1,41 @@
+{% extends "atelier/base.html" %}
+{% load static %}
+
+{% block title %}Spark — 메모 목록{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'atelier/js/spark_search.js' %}" defer></script>
+{% endblock %}
+
+{% block content %}
+<div class="list-header">
+  <h2>Spark</h2>
+  <a class="btn btn-primary" href="{% url 'atelier:spark_new' %}">새 메모</a>
+</div>
+
+<input id="spark-search" class="search-bar" type="search" placeholder="메모 검색…" autocomplete="off">
+
+<div class="tag-filters">
+  <button class="tag-filter active" data-tag="">전체</button>
+</div>
+
+<div id="note-list" class="note-list">
+  {% for note in notes %}
+  <a class="note-card {% if note.is_pinned %}pinned{% endif %}" href="{% url 'atelier:spark_detail' note.id %}">
+    <div class="note-card-header">
+      {% if note.is_pinned %}<span class="pin-indicator">✦</span>{% endif %}
+      {% if note.tag %}<span class="tag-label">{{ note.tag.name_ko }}</span>{% endif %}
+    </div>
+    <p class="note-card-title">{{ note.title|default:note.body|truncatechars:80 }}</p>
+    <div class="note-card-footer">
+      {% with ref_count=note.incoming_refs.count %}
+        {% if ref_count > 0 %}<span class="ref-count">↔ {{ ref_count }}</span>{% endif %}
+      {% endwith %}
+      <time class="note-card-date">{{ note.created_at|date:"Y.m.d" }}</time>
+    </div>
+  </a>
+  {% empty %}
+  <p class="empty-hint">아직 메모가 없어요. 첫 번째 생각을 기록해 보세요.</p>
+  {% endfor %}
+</div>
+{% endblock %}

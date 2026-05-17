@@ -1,0 +1,56 @@
+{% extends "atelier/base.html" %}
+{% load static %}
+
+{% block title %}{{ note.title|default:"메모" }} — Spark{% endblock %}
+
+{% block extra_js %}
+<script>
+  window.__NOTE_ID__ = {{ note.id }};
+</script>
+<script src="{% static 'atelier/js/note_editor.js' %}" defer></script>
+{% endblock %}
+
+{% block content %}
+<div class="editor-header">
+  <a class="back-link" href="{% url 'atelier:spark_list' %}">← Spark</a>
+  <div class="editor-header-actions">
+    <a id="note-export-link" class="btn btn-ghost" href="{% url 'atelier:spark_export' note.id %}">↓ .md</a>
+    <span id="save-indicator" class="save-indicator"></span>
+  </div>
+</div>
+
+<div class="tag-selector">
+  <button class="tag-btn {% if not note.tag %}active{% endif %}" data-tag-id="">태그 없음</button>
+  {% for tag in tags %}
+  <button class="tag-btn {% if note.tag and note.tag.id == tag.id %}active{% endif %}" data-tag-id="{{ tag.id }}">{{ tag.name_ko }}</button>
+  {% endfor %}
+</div>
+
+<input id="note-title" class="note-title-input" type="text" placeholder="제목 — 선택사항" value="{{ note.title|default:'' }}">
+
+<!-- Mobile tab buttons (hidden on desktop via CSS) -->
+<div class="md-tabs" id="md-tabs">
+  <button class="md-tab-btn active" id="md-tab-edit">편집</button>
+  <button class="md-tab-btn" id="md-tab-preview">미리보기</button>
+</div>
+
+<div class="md-split-view">
+  <textarea id="note-body" class="note-body-textarea md-editor-pane" >{{ note.body }}</textarea>
+  <div class="md-divider"></div>
+  <div id="md-preview" class="md-preview"></div>
+</div>
+
+<div id="autocomplete-dropdown" class="autocomplete-dropdown hidden"></div>
+
+{% if note.outgoing_refs.exists or note.incoming_refs.exists %}
+<section class="references-section">
+  <h3>연결된 메모</h3>
+  {% for ref in note.outgoing_refs.all %}
+  <a class="ref-link" href="{% url 'atelier:spark_detail' ref.to_note.id %}">→ {{ ref.to_note.title|default:ref.to_note.body|truncatechars:60 }}</a>
+  {% endfor %}
+  {% for ref in note.incoming_refs.all %}
+  <a class="ref-link" href="{% url 'atelier:spark_detail' ref.from_note.id %}">← {{ ref.from_note.title|default:ref.from_note.body|truncatechars:60 }}</a>
+  {% endfor %}
+</section>
+{% endif %}
+{% endblock %}

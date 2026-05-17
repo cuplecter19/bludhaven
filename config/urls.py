@@ -16,4 +16,5 @@ urlpatterns = [
     path('api/', include('core.urls')),
     path('api/', include(('scheduler.urls', 'scheduler_api'), namespace='scheduler_api')),
     path('learn/phrases/', include('phrases.urls')),
+    path('atelier/', include('atelier.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

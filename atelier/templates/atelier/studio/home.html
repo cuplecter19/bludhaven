@@ -1,0 +1,59 @@
+{% extends "atelier/base.html" %}
+{% load static %}
+
+{% block title %}Studio — Atelier{% endblock %}
+
+{% block content %}
+<div class="studio-page">
+  <div class="list-header">
+    <h1 class="studio-title">Studio</h1>
+    <a href="{% url 'atelier:studio_new' %}" class="btn btn-primary">새 프로젝트</a>
+  </div>
+
+  <!-- Status tabs -->
+  <div class="studio-tabs">
+    <a href="?status=active" class="studio-tab {% if status_filter == 'active' %}active{% endif %}">진행 중</a>
+    <a href="?status=paused" class="studio-tab {% if status_filter == 'paused' %}active{% endif %}">잠시 멈춤</a>
+    <a href="?status=done" class="studio-tab {% if status_filter == 'done' %}active{% endif %}">완료</a>
+    <a href="?status=" class="studio-tab {% if not status_filter %}active{% endif %}">전체</a>
+  </div>
+
+  {% if projects %}
+  <div class="project-grid" id="project-grid">
+    {% for project in projects %}
+    <a href="{% url 'atelier:studio_detail' project.id %}" class="project-card" style="border-left-color: {{ project.color_hex }};">
+      <div class="project-card-top">
+        <span class="project-title">{{ project.title }}</span>
+        <span class="status-badge status-{{ project.status }}">
+          {% if project.status == 'active' %}진행 중{% elif project.status == 'paused' %}잠시 멈춤{% else %}완료{% endif %}
+        </span>
+      </div>
+      {% if project.description %}
+      <p class="project-desc">{{ project.description }}</p>
+      {% endif %}
+      <p class="project-focus">
+        {% if project.current_focus %}
+          {{ project.current_focus|truncatechars:120 }}
+        {% else %}
+          <span class="empty-hint">지금 집중하고 있는 것을 적어보세요</span>
+        {% endif %}
+      </p>
+      <div class="project-card-footer">
+        <span class="note-count">
+          {% with cnt=project.project_notes.count %}
+            {% if cnt %}메모 {{ cnt }}개{% endif %}
+          {% endwith %}
+        </span>
+        <time class="project-date">{{ project.updated_at|date:"Y.m.d" }}</time>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="empty-hint" style="margin-top:3rem; text-align:center;">
+    {% if status_filter == 'active' %}진행 중인 프로젝트가 없어요.{% elif status_filter == 'paused' %}잠시 멈춘 프로젝트가 없어요.{% elif status_filter == 'done' %}완료된 프로젝트가 없어요.{% else %}아직 프로젝트가 없어요.{% endif %}
+    <br><a href="{% url 'atelier:studio_new' %}" class="btn btn-ghost" style="margin-top:1rem;">새 프로젝트 만들기</a>
+  </p>
+  {% endif %}
+</div>
+{% endblock %}

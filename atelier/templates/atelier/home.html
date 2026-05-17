@@ -1,0 +1,41 @@
+{% extends "atelier/base.html" %}
+{% load static %}
+
+{% block title %}Atelier — 홈{% endblock %}
+
+{% block content %}
+<div class="home-layout">
+  <section class="home-notes">
+    <h2>최근 메모</h2>
+    {% for note in notes %}
+    <a class="note-card" href="{% url 'atelier:spark_detail' note.id %}">
+      {% if note.tag %}<span class="tag-label">{{ note.tag.name_ko }}</span>{% endif %}
+      <p class="note-card-title">{{ note.title|default:note.body|truncatechars:60 }}</p>
+      <time class="note-card-date">{{ note.created_at|date:"Y.m.d" }}</time>
+    </a>
+    {% empty %}
+    <p class="empty-hint">아직 메모가 없어요.</p>
+    {% endfor %}
+  </section>
+
+  <section class="home-pulse">
+    <h2>오늘의 Pulse</h2>
+    {% if today_mood %}
+      <div class="today-mood">
+        <span class="mood-score-display">{{ today_mood.mood_score }}/10</span>
+        {% if today_mood.emotion_tags %}
+          <p class="emotion-tags-display">{{ today_mood.emotion_tags|cut:";" }}</p>
+        {% endif %}
+      </div>
+    {% else %}
+      <p class="pulse-prompt">오늘 기분은 어때요?</p>
+      <a class="btn btn-primary" href="{% url 'atelier:pulse_checkin' %}">기분 기록하기</a>
+    {% endif %}
+  </section>
+</div>
+
+<div class="home-actions">
+  <a class="btn btn-primary" href="{% url 'atelier:spark_new' %}">새 메모 쓰기</a>
+  <a class="btn btn-secondary" href="{% url 'atelier:pulse_phq9' %}">PHQ-9 기록하기</a>
+</div>
+{% endblock %}

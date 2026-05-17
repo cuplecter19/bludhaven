@@ -1,0 +1,41 @@
+{% extends "atelier/base.html" %}
+{% load static %}
+
+{% block title %}새 메모 — Spark{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'atelier/js/note_editor.js' %}" defer></script>
+{% endblock %}
+
+{% block content %}
+<div class="editor-header">
+  <a class="back-link" href="{% url 'atelier:spark_list' %}">← Spark</a>
+  <div class="editor-header-actions">
+    <a id="note-export-link" class="btn btn-ghost" href="#" style="visibility:hidden;">↓ .md</a>
+    <span id="save-indicator" class="save-indicator"></span>
+  </div>
+</div>
+
+<div class="tag-selector">
+  <button class="tag-btn active" data-tag-id="">태그 없음</button>
+  {% for tag in tags %}
+  <button class="tag-btn" data-tag-id="{{ tag.id }}">{{ tag.name_ko }}</button>
+  {% endfor %}
+</div>
+
+<input id="note-title" class="note-title-input" type="text" placeholder="제목 — 선택사항">
+
+<!-- Mobile tab buttons -->
+<div class="md-tabs" id="md-tabs">
+  <button class="md-tab-btn active" id="md-tab-edit">편집</button>
+  <button class="md-tab-btn" id="md-tab-preview">미리보기</button>
+</div>
+
+<div class="md-split-view">
+  <textarea id="note-body" class="note-body-textarea md-editor-pane" placeholder="지금 뭐가 떠오르세요?" autofocus></textarea>
+  <div class="md-divider"></div>
+  <div id="md-preview" class="md-preview"></div>
+</div>
+
+<div id="autocomplete-dropdown" class="autocomplete-dropdown hidden"></div>
+{% endblock %}

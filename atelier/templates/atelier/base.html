@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Atelier{% endblock %}</title>
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'atelier/css/atelier.css' %}">
+  <script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js" defer></script>
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+  <header class="atelier-header">
+    <nav class="atelier-nav">
+      <a class="nav-brand" href="{% url 'atelier:home' %}">Atelier</a>
+      <div class="nav-links">
+        <a href="{% url 'atelier:spark_list' %}">Spark</a>
+        <a href="{% url 'atelier:pulse_home' %}">Pulse</a>
+        <a href="{% url 'atelier:studio_home' %}">Studio</a>
+      </div>
+    </nav>
+  </header>
+  <main class="atelier-main">
+    {% block content %}{% endblock %}
+  </main>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

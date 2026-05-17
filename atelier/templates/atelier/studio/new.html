@@ -1,0 +1,105 @@
+{% extends "atelier/base.html" %}
+{% load static %}
+
+{% block title %}새 프로젝트 — Studio{% endblock %}
+
+{% block content %}
+<div class="studio-new-layout">
+  <a class="back-link" href="{% url 'atelier:studio_home' %}">← Studio</a>
+  <h2 style="margin: 1.2rem 0 2rem;">새 프로젝트</h2>
+
+  <form id="new-project-form" class="project-form">
+    {% csrf_token %}
+
+    <div class="form-group">
+      <label class="form-label" for="proj-title">제목 <span style="color:var(--mood-hard)">*</span></label>
+      <input id="proj-title" class="project-input" type="text" name="title" placeholder="프로젝트 이름" autofocus required maxlength="200">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="proj-desc">한 줄 설명 <span style="color:var(--ink-soft); font-size:0.8rem;">(선택)</span></label>
+      <input id="proj-desc" class="project-input" type="text" name="description" placeholder="무엇에 관한 프로젝트인가요?" maxlength="200">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">색상</label>
+      <div class="color-palette">
+        {% for color in colors %}
+        <button type="button"
+                class="color-swatch {% if color == default_color %}selected{% endif %}"
+                data-color="{{ color }}"
+                style="background: {{ color }};"
+                title="{{ color }}">
+        </button>
+        {% endfor %}
+      </div>
+      <input type="hidden" id="proj-color" name="color_hex" value="{{ default_color }}">
+    </div>
+
+    <p id="form-error" class="form-error hidden"></p>
+
+    <div style="margin-top:2rem;">
+      <button type="submit" class="btn btn-primary">만들기</button>
+    </div>
+  </form>
+</div>
+
+<script>
+(function() {
+  function getCsrfToken() {
+    for (let c of document.cookie.split(';')) {
+      const [k, v] = c.trim().split('=');
+      if (k === 'csrftoken') return decodeURIComponent(v);
+    }
+    return '';
+  }
+
+  // Color palette
+  const swatches = document.querySelectorAll('.color-swatch');
+  const colorInput = document.getElementById('proj-color');
+  swatches.forEach(sw => {
+    sw.addEventListener('click', () => {
+      swatches.forEach(s => s.classList.remove('selected'));
+      sw.classList.add('selected');
+      colorInput.value = sw.dataset.color;
+    });
+  });
+
+  // Submit
+  document.getElementById('new-project-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const title = document.getElementById('proj-title').value.trim();
+    const desc = document.getElementById('proj-desc').value.trim();
+    const color = colorInput.value;
+    const errEl = document.getElementById('form-error');
+
+    if (!title) {
+      errEl.textContent = '제목을 입력해주세요.';
+      errEl.classList.remove('hidden');
+      return;
+    }
+    errEl.classList.add('hidden');
+
+    try {
+      const resp = await fetch('{% url "atelier:api_projects_list" %}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+        body: JSON.stringify({ title, description: desc || null, color_hex: color }),
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        window.location.href = `/atelier/studio/${data.id}/`;
+      } else {
+        const data = await resp.json();
+        errEl.textContent = data.error || '오류가 발생했어요.';
+        errEl.classList.remove('hidden');
+      }
+    } catch (err) {
+      console.error('[studio_new] submit failed:', err);
+      errEl.textContent = '요청에 실패했어요. 다시 시도해 주세요.';
+      errEl.classList.remove('hidden');
+    }
+  });
+})();
+</script>
+{% endblock %}
