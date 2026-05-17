@@ -31,5 +31,12 @@ class PHQ9LogAdmin(admin.ModelAdmin):
     list_display = ('user', 'total_score', 'logged_at', 'created_at')
 
 
-admin.site.register(Project)
 admin.site.register(ProjectNote)
+
+
+@admin.register(Project)
+class ProjectAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'title', 'status', 'sort_order', 'updated_at')
+    list_filter = ('status',)
+    search_fields = ('title',)
+    ordering = ('user', 'sort_order')

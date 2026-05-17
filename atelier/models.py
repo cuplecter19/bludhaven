@@ -147,6 +147,12 @@ class Project(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['user', 'status'], name='atelier_proj_status_idx'),
+            models.Index(fields=['user', 'sort_order'], name='atelier_proj_order_idx'),
+        ]
+
     def __str__(self):
         return self.title
 

@@ -2,16 +2,21 @@ import json
 
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from .models import MoodLog, Note, NoteReference, PHQ9Log, SparkTag
+from .models import MoodLog, Note, NoteReference, PHQ9Log, Project, ProjectNote, SparkTag
 from .services import (
     calculate_phq9_total,
     get_mood_trend,
+    get_project_dict,
+    get_projects_for_user,
     get_pulse_calendar_data,
+    link_note_to_project,
+    reorder_projects,
     search_notes,
     sync_references,
+    unlink_note_from_project,
 )
 
 EMOTION_TAGS = ['불안', '무기력', '예민', '슬픔', '피곤함', '괜찮음', '평온함', '좋음', '설렘']
@@ -348,3 +353,172 @@ def api_pulse_trend(request):
         days = 30
     data = get_mood_trend(request.user, days)
     return JsonResponse({'data': data})
+
+
+# ---------------------------------------------------------------------------
+# Studio page views
+# ---------------------------------------------------------------------------
+
+# Colour palette offered on the project creation form (higher-saturation tones)
+PROJECT_COLORS = [
+    '#c8973a',  # warm amber
+    '#4a7a8a',  # teal-slate
+    '#8a4a72',  # plum
+    '#3a7a5a',  # forest green
+    '#a07010',  # deep gold
+    '#7a3a6a',  # berry
+]
+
+
+@login_required
+def studio_home(request):
+    status_filter = request.GET.get('status', 'active')
+    projects = get_projects_for_user(request.user, status=status_filter)
+    return render(request, 'atelier/studio/home.html', {
+        'projects': projects,
+        'status_filter': status_filter,
+    })
+
+
+@login_required
+def studio_new(request):
+    return render(request, 'atelier/studio/new.html', {
+        'colors': PROJECT_COLORS,
+        'default_color': PROJECT_COLORS[0],
+    })
+
+
+@login_required
+def studio_detail(request, project_id):
+    project = get_object_or_404(Project, id=project_id, user=request.user)
+    linked_notes = (
+        Note.objects
+        .filter(project_links__project=project)
+        .order_by('-created_at')
+    )
+    project_statuses = [
+        ('active', '진행 중'),
+        ('paused', '잠시 멈춤'),
+        ('done', '완료'),
+    ]
+    return render(request, 'atelier/studio/detail.html', {
+        'project': project,
+        'linked_notes': linked_notes,
+        'colors': PROJECT_COLORS,
+        'project_statuses': project_statuses,
+    })
+
+
+# ---------------------------------------------------------------------------
+# Studio API views
+# ---------------------------------------------------------------------------
+
+@login_required
+def api_projects_list(request):
+    if request.method == 'GET':
+        status_filter = request.GET.get('status', '')
+        projects = get_projects_for_user(request.user, status=status_filter)
+        return JsonResponse({'projects': [get_project_dict(p) for p in projects]})
+
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+        title = (data.get('title') or '').strip()
+        if not title:
+            return JsonResponse({'error': 'title is required'}, status=400)
+
+        project = Project.objects.create(
+            user=request.user,
+            title=title,
+            description=data.get('description') or None,
+            color_hex=data.get('color_hex', '#c8a96e'),
+            status=data.get('status', 'active'),
+        )
+        return JsonResponse(get_project_dict(project), status=201)
+
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+@login_required
+def api_project_detail(request, project_id):
+    project = get_object_or_404(Project, id=project_id, user=request.user)
+
+    if request.method == 'GET':
+        return JsonResponse(get_project_dict(project))
+
+    if request.method == 'PATCH':
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+        updatable = ('title', 'description', 'status', 'current_focus', 'next_steps', 'color_hex', 'sort_order')
+        for field in updatable:
+            if field in data:
+                setattr(project, field, data[field])
+        project.save()
+        return JsonResponse(get_project_dict(project))
+
+    if request.method == 'DELETE':
+        project.delete()
+        return JsonResponse({}, status=204)
+
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+@login_required
+def api_project_notes(request, project_id):
+    project = get_object_or_404(Project, id=project_id, user=request.user)
+
+    if request.method == 'GET':
+        notes = Note.objects.filter(project_links__project=project).order_by('-created_at')
+        return JsonResponse({'notes': [_note_to_dict(n) for n in notes]})
+
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+        note_id = data.get('note_id')
+        if not note_id:
+            return JsonResponse({'error': 'note_id is required'}, status=400)
+
+        note = get_object_or_404(Note, id=note_id, user=request.user)
+        created = link_note_to_project(project, note)
+        status_code = 201 if created else 200
+        return JsonResponse({'linked': True, 'note': _note_to_dict(note)}, status=status_code)
+
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+@login_required
+def api_project_note_unlink(request, project_id, note_id):
+    if request.method != 'DELETE':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    project = get_object_or_404(Project, id=project_id, user=request.user)
+    note = get_object_or_404(Note, id=note_id, user=request.user)
+    unlink_note_from_project(project, note)
+    return JsonResponse({}, status=204)
+
+
+@login_required
+def api_projects_reorder(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    ordered_ids = data.get('ordered_ids', [])
+    if not isinstance(ordered_ids, list):
+        return JsonResponse({'error': 'ordered_ids must be a list'}, status=400)
+
+    reorder_projects(request.user, ordered_ids)
+    return JsonResponse({'ok': True})

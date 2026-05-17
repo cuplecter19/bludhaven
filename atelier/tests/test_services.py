@@ -154,3 +154,77 @@ class SearchNotesTest(TestCase):
         Note.objects.create(user=other, title='Django Secret', body='secret')
         results = search_notes(self.user, 'Django')
         self.assertEqual(results.count(), 1)
+
+
+# ---------------------------------------------------------------------------
+# Studio service tests
+# ---------------------------------------------------------------------------
+
+class ProjectServicesTest(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        self.user = User.objects.create_user(username='svcproj', password='t', nickname='svcproj')
+
+    def _make_project(self, title='P', status='active'):
+        from atelier.models import Project
+        return Project.objects.create(user=self.user, title=title, status=status)
+
+    def test_get_projects_for_user_no_filter(self):
+        from atelier.services import get_projects_for_user
+        p1 = self._make_project('A', 'active')
+        p2 = self._make_project('B', 'done')
+        projects = get_projects_for_user(self.user)
+        ids = [p.id for p in projects]
+        self.assertIn(p1.id, ids)
+        self.assertIn(p2.id, ids)
+
+    def test_get_projects_for_user_status_filter(self):
+        from atelier.services import get_projects_for_user
+        p1 = self._make_project('Active', 'active')
+        self._make_project('Done', 'done')
+        projects = get_projects_for_user(self.user, status='active')
+        self.assertEqual(len(projects), 1)
+        self.assertEqual(projects[0].id, p1.id)
+
+    def test_reorder_projects(self):
+        from atelier.services import reorder_projects
+        from atelier.models import Project
+        p1 = self._make_project('First')
+        p2 = self._make_project('Second')
+        reorder_projects(self.user, [p2.id, p1.id])
+        p2.refresh_from_db()
+        p1.refresh_from_db()
+        self.assertEqual(p2.sort_order, 0)
+        self.assertEqual(p1.sort_order, 1)
+
+    def test_link_and_unlink_note(self):
+        from atelier.services import link_note_to_project, unlink_note_from_project
+        from atelier.models import Note, ProjectNote
+        project = self._make_project()
+        note = Note.objects.create(user=self.user, body='hello')
+        created = link_note_to_project(project, note)
+        self.assertTrue(created)
+        self.assertTrue(ProjectNote.objects.filter(project=project, note=note).exists())
+
+        deleted = unlink_note_from_project(project, note)
+        self.assertTrue(deleted)
+        self.assertFalse(ProjectNote.objects.filter(project=project, note=note).exists())
+
+    def test_link_note_idempotent(self):
+        from atelier.services import link_note_to_project
+        from atelier.models import Note
+        project = self._make_project()
+        note = Note.objects.create(user=self.user, body='dup')
+        link_note_to_project(project, note)
+        created = link_note_to_project(project, note)
+        self.assertFalse(created)
+
+    def test_get_project_dict(self):
+        from atelier.services import get_project_dict
+        project = self._make_project('MyProj')
+        d = get_project_dict(project)
+        self.assertEqual(d['title'], 'MyProj')
+        self.assertIn('id', d)
+        self.assertIn('status', d)
+        self.assertIn('note_count', d)

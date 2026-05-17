@@ -228,3 +228,187 @@ class PHQ9APITest(TestCase):
         resp = self.client.get(reverse('atelier:api_phq9_list'))
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(len(resp.json()['logs']), 1)
+
+
+# ---------------------------------------------------------------------------
+# Studio page & API tests
+# ---------------------------------------------------------------------------
+
+class StudioPageTest(TestCase):
+    def setUp(self):
+        from atelier.models import Project
+        self.client = Client()
+        self.user = make_user('studiouser')
+        self.project = Project.objects.create(user=self.user, title='Test Project')
+
+    def _login(self):
+        self.client.login(username='studiouser', password='test')
+
+    def test_studio_home_requires_login(self):
+        resp = self.client.get(reverse('atelier:studio_home'))
+        self.assertEqual(resp.status_code, 302)
+
+    def test_studio_home_logged_in(self):
+        self._login()
+        resp = self.client.get(reverse('atelier:studio_home'))
+        self.assertEqual(resp.status_code, 200)
+
+    def test_studio_home_status_filter(self):
+        self._login()
+        resp = self.client.get(reverse('atelier:studio_home') + '?status=done')
+        self.assertEqual(resp.status_code, 200)
+
+    def test_studio_new_logged_in(self):
+        self._login()
+        resp = self.client.get(reverse('atelier:studio_new'))
+        self.assertEqual(resp.status_code, 200)
+
+    def test_studio_new_requires_login(self):
+        resp = self.client.get(reverse('atelier:studio_new'))
+        self.assertEqual(resp.status_code, 302)
+
+    def test_studio_detail_logged_in(self):
+        self._login()
+        resp = self.client.get(reverse('atelier:studio_detail', args=[self.project.id]))
+        self.assertEqual(resp.status_code, 200)
+
+    def test_studio_detail_requires_login(self):
+        resp = self.client.get(reverse('atelier:studio_detail', args=[self.project.id]))
+        self.assertEqual(resp.status_code, 302)
+
+    def test_studio_detail_other_user_returns_404(self):
+        other = make_user('other_studio')
+        self._login()
+        other_project = __import__('atelier.models', fromlist=['Project']).Project.objects.create(
+            user=other, title='Other Project'
+        )
+        resp = self.client.get(reverse('atelier:studio_detail', args=[other_project.id]))
+        self.assertEqual(resp.status_code, 404)
+
+
+class ProjectAPITest(TestCase):
+    def setUp(self):
+        from atelier.models import Project
+        self.client = Client()
+        self.user = make_user('projapi')
+        self.client.login(username='projapi', password='test')
+        self.project = Project.objects.create(
+            user=self.user,
+            title='My Project',
+            status='active',
+        )
+
+    def test_list_projects(self):
+        resp = self.client.get(reverse('atelier:api_projects_list'))
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIn('projects', data)
+
+    def test_list_projects_status_filter(self):
+        resp = self.client.get(reverse('atelier:api_projects_list') + '?status=active')
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(all(p['status'] == 'active' for p in resp.json()['projects']))
+
+    def test_create_project(self):
+        resp = self.client.post(
+            reverse('atelier:api_projects_list'),
+            data=json.dumps({'title': 'New Project', 'color_hex': '#4a7a8a'}),
+            content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, 201)
+        data = resp.json()
+        self.assertEqual(data['title'], 'New Project')
+        self.assertEqual(data['color_hex'], '#4a7a8a')
+
+    def test_create_project_missing_title(self):
+        resp = self.client.post(
+            reverse('atelier:api_projects_list'),
+            data=json.dumps({'description': 'no title'}),
+            content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, 400)
+
+    def test_get_project_detail(self):
+        resp = self.client.get(reverse('atelier:api_project_detail', args=[self.project.id]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()['title'], 'My Project')
+
+    def test_patch_project(self):
+        resp = self.client.patch(
+            reverse('atelier:api_project_detail', args=[self.project.id]),
+            data=json.dumps({'current_focus': 'Working on tests', 'status': 'paused'}),
+            content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data['current_focus'], 'Working on tests')
+        self.assertEqual(data['status'], 'paused')
+
+    def test_delete_project(self):
+        resp = self.client.delete(reverse('atelier:api_project_detail', args=[self.project.id]))
+        self.assertEqual(resp.status_code, 204)
+        from atelier.models import Project
+        self.assertFalse(Project.objects.filter(id=self.project.id).exists())
+
+    def test_other_user_cannot_access_project(self):
+        other = make_user('other_proj')
+        from atelier.models import Project
+        other_proj = Project.objects.create(user=other, title='Other')
+        resp = self.client.get(reverse('atelier:api_project_detail', args=[other_proj.id]))
+        self.assertEqual(resp.status_code, 404)
+
+    def test_link_note_to_project(self):
+        note = Note.objects.create(user=self.user, body='A spark note')
+        resp = self.client.post(
+            reverse('atelier:api_project_notes', args=[self.project.id]),
+            data=json.dumps({'note_id': note.id}),
+            content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, 201)
+        self.assertTrue(resp.json()['linked'])
+
+    def test_link_note_idempotent(self):
+        note = Note.objects.create(user=self.user, body='Idempotent note')
+        self.client.post(
+            reverse('atelier:api_project_notes', args=[self.project.id]),
+            data=json.dumps({'note_id': note.id}),
+            content_type='application/json',
+        )
+        resp = self.client.post(
+            reverse('atelier:api_project_notes', args=[self.project.id]),
+            data=json.dumps({'note_id': note.id}),
+            content_type='application/json',
+        )
+        self.assertIn(resp.status_code, (200, 201))
+
+    def test_get_project_notes(self):
+        note = Note.objects.create(user=self.user, body='A linked note')
+        from atelier.models import ProjectNote
+        ProjectNote.objects.create(project=self.project, note=note)
+        resp = self.client.get(reverse('atelier:api_project_notes', args=[self.project.id]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(len(resp.json()['notes']), 1)
+
+    def test_unlink_note_from_project(self):
+        note = Note.objects.create(user=self.user, body='To unlink')
+        from atelier.models import ProjectNote
+        ProjectNote.objects.create(project=self.project, note=note)
+        resp = self.client.delete(
+            reverse('atelier:api_project_note_unlink', args=[self.project.id, note.id])
+        )
+        self.assertEqual(resp.status_code, 204)
+        self.assertFalse(ProjectNote.objects.filter(project=self.project, note=note).exists())
+
+    def test_reorder_projects(self):
+        from atelier.models import Project
+        p2 = Project.objects.create(user=self.user, title='Second')
+        resp = self.client.post(
+            reverse('atelier:api_projects_reorder'),
+            data=json.dumps({'ordered_ids': [p2.id, self.project.id]}),
+            content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, 200)
+        p2.refresh_from_db()
+        self.project.refresh_from_db()
+        self.assertEqual(p2.sort_order, 0)
+        self.assertEqual(self.project.sort_order, 1)

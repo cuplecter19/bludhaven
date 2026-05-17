@@ -108,3 +108,57 @@ def get_mood_trend(user, days: int = 30) -> list:
         }
         for log in logs
     ]
+
+
+# ---------------------------------------------------------------------------
+# Studio / Project services
+# ---------------------------------------------------------------------------
+
+def get_project_dict(project) -> dict:
+    """Serialize a Project to a dict for API responses."""
+    return {
+        'id': project.id,
+        'title': project.title,
+        'description': project.description or '',
+        'status': project.status,
+        'current_focus': project.current_focus or '',
+        'next_steps': project.next_steps or '',
+        'color_hex': project.color_hex,
+        'sort_order': project.sort_order,
+        'note_count': project.project_notes.count(),
+        'created_at': project.created_at.isoformat(),
+        'updated_at': project.updated_at.isoformat(),
+    }
+
+
+def get_projects_for_user(user, status: str = '') -> list:
+    """Return ordered list of user's projects, optionally filtered by status."""
+    from .models import Project
+    qs = Project.objects.filter(user=user)
+    if status and status in ('active', 'paused', 'done'):
+        qs = qs.filter(status=status)
+    return list(qs.order_by('sort_order', 'created_at'))
+
+
+def reorder_projects(user, ordered_ids: list) -> None:
+    """Update sort_order for a user's projects given an ordered list of IDs."""
+    from .models import Project
+    projects = {p.id: p for p in Project.objects.filter(user=user, id__in=ordered_ids)}
+    for idx, pid in enumerate(ordered_ids):
+        if pid in projects:
+            projects[pid].sort_order = idx
+            projects[pid].save(update_fields=['sort_order'])
+
+
+def link_note_to_project(project, note) -> bool:
+    """Link a note to a project. Returns True if created, False if already linked."""
+    from .models import ProjectNote
+    _, created = ProjectNote.objects.get_or_create(project=project, note=note)
+    return created
+
+
+def unlink_note_from_project(project, note) -> bool:
+    """Unlink a note from a project. Returns True if deleted."""
+    from .models import ProjectNote
+    deleted, _ = ProjectNote.objects.filter(project=project, note=note).delete()
+    return deleted > 0

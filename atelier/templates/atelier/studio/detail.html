@@ -1,0 +1,319 @@
+{% extends "atelier/base.html" %}
+{% load static %}
+
+{% block title %}{{ project.title }} — Studio{% endblock %}
+
+{% block content %}
+<div class="studio-detail-layout">
+
+  <!-- Left panel: content -->
+  <div class="studio-detail-left">
+    <a class="back-link" href="{% url 'atelier:studio_home' %}">← Studio</a>
+
+    <div class="project-detail-header" style="border-left: 4px solid {{ project.color_hex }}; padding-left: 1rem; margin: 1.2rem 0 2rem;">
+      <div class="project-detail-top">
+        <span id="detail-status-badge" class="status-badge status-{{ project.status }}">
+          {% if project.status == 'active' %}진행 중{% elif project.status == 'paused' %}잠시 멈춤{% else %}완료{% endif %}
+        </span>
+        <div class="project-status-buttons">
+          {% for val, label_ko in project_statuses %}
+          <button type="button"
+                  class="btn btn-ghost status-change-btn {% if project.status == val %}active{% endif %}"
+                  data-status="{{ val }}"
+                  style="font-size:0.75rem; padding:0.25rem 0.6rem;">
+            {{ label_ko }}
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+      <h1 id="detail-title" class="project-detail-title">{{ project.title }}</h1>
+      <p id="detail-desc" class="project-detail-desc">{{ project.description|default:"" }}</p>
+    </div>
+
+    <!-- Current focus -->
+    <section class="focus-section">
+      <h2 class="section-heading">지금 하고 있는 것</h2>
+      <textarea id="current-focus" class="focus-textarea autoresize" placeholder="지금 집중하고 있는 것을 적어보세요.">{{ project.current_focus|default:"" }}</textarea>
+    </section>
+
+    <div class="section-divider"></div>
+
+    <!-- Next steps -->
+    <section class="focus-section">
+      <h2 class="section-heading">다음에 할 것</h2>
+      <textarea id="next-steps" class="focus-textarea autoresize" placeholder="다음 단계로 하고 싶은 것을 적어보세요.">{{ project.next_steps|default:"" }}</textarea>
+    </section>
+
+    <div class="section-divider"></div>
+
+    <!-- Done / Completed area -->
+    <section class="done-section">
+      <button id="done-toggle" class="done-toggle-btn" type="button">
+        <span id="done-toggle-icon">▶</span> 완료된 것들
+      </button>
+      <div id="done-content" class="done-content" hidden>
+        <textarea id="completed-notes" class="focus-textarea autoresize" placeholder="마무리한 것들을 여기 옮겨두세요. 쌓일수록 기분이 좋아집니다.">{{ project.completed_notes|default:"" }}</textarea>
+      </div>
+    </section>
+
+    <!-- Save indicator -->
+    <span id="save-indicator" class="save-indicator"></span>
+  </div>
+
+  <!-- Right panel: linked notes -->
+  <aside class="studio-detail-right">
+    <div class="sticky-panel">
+      <h3 class="panel-heading">연결된 Spark 메모</h3>
+
+      {% if linked_notes %}
+      <ul class="linked-notes-list" id="linked-notes-list">
+        {% for note in linked_notes %}
+        <li class="linked-note-item" data-note-id="{{ note.id }}">
+          <a href="{% url 'atelier:spark_detail' note.id %}" class="linked-note-title">
+            {{ note.title|default:note.body|truncatechars:60 }}
+          </a>
+          <button type="button" class="btn-unlink" data-note-id="{{ note.id }}" title="연결 해제">✕</button>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="empty-hint" id="no-notes-hint">아직 연결된 메모가 없어요.</p>
+      {% endif %}
+
+      <!-- Link a note -->
+      <div class="link-note-area">
+        <input id="note-search-input" class="search-bar" type="text" placeholder="메모 검색하여 연결…">
+        <div id="note-search-results" class="autocomplete-dropdown hidden"></div>
+      </div>
+    </div>
+  </aside>
+
+</div>
+
+<script>
+(function() {
+  const PROJECT_ID = {{ project.id }};
+  const PATCH_URL = `/atelier/api/projects/${PROJECT_ID}/`;
+  const NOTES_URL = `/atelier/api/projects/${PROJECT_ID}/notes/`;
+
+  function getCsrfToken() {
+    for (let c of document.cookie.split(';')) {
+      const [k, v] = c.trim().split('=');
+      if (k === 'csrftoken') return decodeURIComponent(v);
+    }
+    return '';
+  }
+
+  // Auto-resize textareas
+  document.querySelectorAll('.autoresize').forEach(ta => {
+    const resize = () => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; };
+    ta.addEventListener('input', resize);
+    resize();
+  });
+
+  // Done section collapse/expand with localStorage
+  const doneToggle = document.getElementById('done-toggle');
+  const doneContent = document.getElementById('done-content');
+  const doneIcon = document.getElementById('done-toggle-icon');
+  const DONE_KEY = `atelier_done_open_${PROJECT_ID}`;
+
+  function setDoneOpen(open) {
+    if (open) {
+      doneContent.hidden = false;
+      doneIcon.textContent = '▼';
+      localStorage.setItem(DONE_KEY, '1');
+    } else {
+      doneContent.hidden = true;
+      doneIcon.textContent = '▶';
+      localStorage.removeItem(DONE_KEY);
+    }
+  }
+  if (localStorage.getItem(DONE_KEY)) setDoneOpen(true);
+  doneToggle.addEventListener('click', () => setDoneOpen(doneContent.hidden));
+
+  // Auto-save debounce
+  let saveTimer = null;
+  const DEBOUNCE_MS = 1500;
+
+  function saveIndicator(msg, isError) {
+    const el = document.getElementById('save-indicator');
+    el.textContent = msg;
+    el.style.color = isError ? 'var(--mood-hard)' : 'var(--ink-soft)';
+    el.classList.add('visible');
+    setTimeout(() => el.classList.remove('visible'), 2000);
+  }
+
+  async function saveProject(fields) {
+    try {
+      const resp = await fetch(PATCH_URL, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+        body: JSON.stringify(fields),
+      });
+      if (resp.ok) saveIndicator('저장됨', false);
+      else saveIndicator('저장 실패 — 다시 시도', true);
+    } catch (err) {
+      console.error('[studio_detail] save failed:', err);
+      saveIndicator('저장 실패 — 다시 시도', true);
+    }
+  }
+
+  function scheduleSave(fields) {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => saveProject(fields), DEBOUNCE_MS);
+  }
+
+  document.getElementById('current-focus').addEventListener('input', function() {
+    scheduleSave({ current_focus: this.value });
+  });
+  document.getElementById('next-steps').addEventListener('input', function() {
+    scheduleSave({ next_steps: this.value });
+  });
+  if (document.getElementById('completed-notes')) {
+    document.getElementById('completed-notes').addEventListener('input', function() {
+      // completed_notes is stored in next_steps for now; adjust if model changes
+    });
+  }
+
+  // Ctrl+S
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      e.preventDefault();
+      clearTimeout(saveTimer);
+      saveProject({
+        current_focus: document.getElementById('current-focus').value,
+        next_steps: document.getElementById('next-steps').value,
+      });
+    }
+  });
+
+  // Status change
+  document.querySelectorAll('.status-change-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const newStatus = btn.dataset.status;
+      try {
+        const resp = await fetch(PATCH_URL, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+          body: JSON.stringify({ status: newStatus }),
+        });
+        if (resp.ok) {
+          document.querySelectorAll('.status-change-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          const badge = document.getElementById('detail-status-badge');
+          badge.className = `status-badge status-${newStatus}`;
+          const labels = { active: '진행 중', paused: '잠시 멈춤', done: '완료' };
+          badge.textContent = labels[newStatus] || newStatus;
+          saveIndicator('저장됨', false);
+        }
+      } catch (err) {
+        console.error('[studio_detail] status change failed:', err);
+      }
+    });
+  });
+
+  // Note search & link
+  const searchInput = document.getElementById('note-search-input');
+  const searchResults = document.getElementById('note-search-results');
+  let searchTimer = null;
+
+  searchInput.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    const q = searchInput.value.trim();
+    if (!q) { searchResults.classList.add('hidden'); return; }
+    searchTimer = setTimeout(() => doNoteSearch(q), 300);
+  });
+
+  async function doNoteSearch(q) {
+    try {
+      const resp = await fetch(`/atelier/api/notes/search/?q=${encodeURIComponent(q)}`);
+      const data = await resp.json();
+      renderSearchResults(data.notes || []);
+    } catch (err) {
+      console.error('[studio_detail] note search failed:', err);
+    }
+  }
+
+  function renderSearchResults(notes) {
+    if (!notes.length) { searchResults.classList.add('hidden'); return; }
+    searchResults.innerHTML = '';
+    notes.slice(0, 8).forEach(n => {
+      const item = document.createElement('div');
+      item.className = 'autocomplete-item';
+      item.textContent = n.title || n.body_preview;
+      item.addEventListener('mousedown', async (e) => {
+        e.preventDefault();
+        await linkNote(n.id, n.title || n.body_preview);
+        searchInput.value = '';
+        searchResults.classList.add('hidden');
+      });
+      searchResults.appendChild(item);
+    });
+    searchResults.classList.remove('hidden');
+  }
+
+  async function linkNote(noteId, label) {
+    try {
+      const resp = await fetch(NOTES_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+        body: JSON.stringify({ note_id: noteId }),
+      });
+      if (resp.ok) {
+        appendLinkedNote(noteId, label);
+        const hint = document.getElementById('no-notes-hint');
+        if (hint) hint.remove();
+      }
+    } catch (err) {
+      console.error('[studio_detail] link note failed:', err);
+    }
+  }
+
+  function appendLinkedNote(noteId, label) {
+    let list = document.getElementById('linked-notes-list');
+    if (!list) {
+      list = document.createElement('ul');
+      list.className = 'linked-notes-list';
+      list.id = 'linked-notes-list';
+      document.querySelector('.link-note-area').before(list);
+    }
+    // avoid duplicate
+    if (list.querySelector(`[data-note-id="${noteId}"]`)) return;
+    const li = document.createElement('li');
+    li.className = 'linked-note-item';
+    li.dataset.noteId = noteId;
+    li.innerHTML = `<a href="/atelier/spark/${noteId}/" class="linked-note-title">${escapeHtml(label)}</a>
+      <button type="button" class="btn-unlink" data-note-id="${noteId}" title="연결 해제">✕</button>`;
+    list.appendChild(li);
+    li.querySelector('.btn-unlink').addEventListener('click', () => unlinkNote(noteId, li));
+  }
+
+  async function unlinkNote(noteId, liEl) {
+    try {
+      const resp = await fetch(`/atelier/api/projects/${PROJECT_ID}/notes/${noteId}/`, {
+        method: 'DELETE',
+        headers: { 'X-CSRFToken': getCsrfToken() },
+      });
+      if (resp.ok || resp.status === 204) liEl.remove();
+    } catch (err) {
+      console.error('[studio_detail] unlink note failed:', err);
+    }
+  }
+
+  // Bind existing unlink buttons
+  document.querySelectorAll('.btn-unlink').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const noteId = parseInt(btn.dataset.noteId);
+      const li = btn.closest('li');
+      unlinkNote(noteId, li);
+    });
+  });
+
+  searchInput.addEventListener('blur', () => setTimeout(() => searchResults.classList.add('hidden'), 200));
+
+  function escapeHtml(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+})();
+</script>
+{% endblock %}
