@@ -34,7 +34,7 @@
       if (currentTag) notes = notes.filter(n => n.tag && n.tag.name === currentTag);
       renderNotes(notes);
     } catch (err) {
-      // silently fail
+      console.error('[spark_search] Search failed:', err);
     }
   }
 

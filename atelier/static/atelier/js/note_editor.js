@@ -132,7 +132,10 @@
       const resp = await fetch(`/atelier/api/notes/search/?q=${encodeURIComponent(query)}`);
       const data = await resp.json();
       renderDropdown(data.notes || []);
-    } catch { hideDropdown(); }
+    } catch (err) {
+      console.error('[note_editor] Autocomplete fetch failed:', err);
+      hideDropdown();
+    }
   }
 
   function renderDropdown(notes) {

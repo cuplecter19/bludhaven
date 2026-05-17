@@ -21,7 +21,7 @@ def _note_to_dict(note, preview_len=80):
     return {
         'id': note.id,
         'title': note.title or '',
-        'body_preview': note.body[:preview_len],
+        'body_preview': note.body[:preview_len],  # safe: Python slicing handles short strings
         'tag': {'id': note.tag.id, 'name': note.tag.name, 'name_ko': note.tag.name_ko} if note.tag else None,
         'is_pinned': note.is_pinned,
         'created_at': note.created_at.isoformat(),
