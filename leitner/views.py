@@ -104,7 +104,7 @@ def submit_answer(request):
 
     # 포인트 지급
     if is_correct:
-        POINT_MAP = {1: 5, 2: 8, 3: 12, 4: 18, 5: 25}  # 높은 박스일수록 더 많은 포인트
+        POINT_MAP = {1: 50, 2: 80, 3: 120, 4: 180, 5: 250}  # 높은 박스일수록 더 많은 포인트
         points = POINT_MAP.get(card.box_number, 5)
         request.user.points += points
         request.user.save(update_fields=['points'])
