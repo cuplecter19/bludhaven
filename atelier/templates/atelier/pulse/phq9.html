@@ -34,6 +34,15 @@
 
 <script>
 (function() {
+  function getCsrfToken() {
+    const name = 'csrftoken';
+    for (let c of document.cookie.split(';')) {
+      const [k, v] = c.trim().split('=');
+      if (k === name) return decodeURIComponent(v);
+    }
+    return '';
+  }
+
   document.getElementById('phq9-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const payload = { note: document.getElementById('phq9-note').value };
@@ -44,7 +53,7 @@
     }
     const resp = await fetch('{% url "atelier:api_phq9_list" %}', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
       body: JSON.stringify(payload),
     });
     const data = await resp.json();

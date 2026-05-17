@@ -4,7 +4,6 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
 
 from .models import MoodLog, Note, NoteReference, PHQ9Log, SparkTag
 from .services import (
@@ -100,7 +99,6 @@ def pulse_phq9(request):
 # API views
 # ---------------------------------------------------------------------------
 
-@csrf_exempt
 @login_required
 def api_notes_list(request):
     if request.method == 'GET':
@@ -162,7 +160,6 @@ def api_notes_search(request):
     return JsonResponse({'notes': [_note_to_dict(n) for n in notes[:50]]})
 
 
-@csrf_exempt
 @login_required
 def api_note_detail(request, note_id):
     note = get_object_or_404(Note, id=note_id, user=request.user)
@@ -220,7 +217,6 @@ def api_note_references(request, note_id):
     return JsonResponse({'outgoing': outgoing, 'incoming': incoming})
 
 
-@csrf_exempt
 @login_required
 def api_mood_list(request):
     if request.method == 'GET':
@@ -288,7 +284,6 @@ def api_mood_detail(request, log_id):
     })
 
 
-@csrf_exempt
 @login_required
 def api_phq9_list(request):
     if request.method == 'GET':

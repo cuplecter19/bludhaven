@@ -8,6 +8,17 @@
   const DEBOUNCE_MS = 1500;
   const BASE_URL = '/atelier/api/notes/';
 
+  function getCsrfToken() {
+    const name = 'csrftoken';
+    const cookies = document.cookie.split(';');
+    for (let c of cookies) {
+      const [k, v] = c.trim().split('=');
+      if (k === name) return decodeURIComponent(v);
+    }
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.content : '';
+  }
+
   let noteId = (typeof window.__NOTE_ID__ !== 'undefined') ? window.__NOTE_ID__ : null;
   let saveTimer = null;
   let selectedTagId = null;
@@ -55,13 +66,13 @@
       if (noteId) {
         resp = await fetch(`${BASE_URL}${noteId}/`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
           body: JSON.stringify(payload),
         });
       } else {
         resp = await fetch(BASE_URL, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
           body: JSON.stringify(payload),
         });
         if (resp.ok) {

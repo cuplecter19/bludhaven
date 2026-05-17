@@ -35,6 +35,15 @@
 
 <script>
 (function() {
+  function getCsrfToken() {
+    const name = 'csrftoken';
+    for (let c of document.cookie.split(';')) {
+      const [k, v] = c.trim().split('=');
+      if (k === name) return decodeURIComponent(v);
+    }
+    return '';
+  }
+
   const moodSlider = document.getElementById('mood-slider');
   const energySlider = document.getElementById('energy-slider');
   const moodVal = document.getElementById('mood-val');
@@ -60,7 +69,7 @@
     };
     const resp = await fetch('{% url "atelier:api_mood_list" %}', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
       body: JSON.stringify(payload),
     });
     if (resp.ok) {
