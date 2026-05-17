@@ -79,7 +79,7 @@ def get_pulse_calendar_data(user, year: int, month: int) -> list:
     logs = (
         MoodLog.objects
         .filter(user=user, logged_at__year=year, logged_at__month=month)
-        .order_by('logged_at')
+        .order_by('logged_at')        # ascending (Django default) — latest entry is last
         .values('logged_at', 'mood_score', 'emotion_tags')
     )
 
