@@ -98,13 +98,14 @@ def get_mood_trend(user, days: int = 30) -> list:
         MoodLog.objects
         .filter(user=user, logged_at__gte=since)
         .order_by('logged_at')
-        .values('logged_at', 'mood_score', 'energy_score')
+        .values('logged_at', 'mood_score', 'energy_score', 'behavior_tags')
     )
     return [
         {
             'logged_at': log['logged_at'].isoformat(),
             'mood_score': log['mood_score'],
             'energy_score': log['energy_score'],
+            'behavior_tags': log['behavior_tags'],
         }
         for log in logs
     ]
@@ -116,17 +117,31 @@ def get_mood_trend(user, days: int = 30) -> list:
 
 def get_project_dict(project) -> dict:
     """Serialize a Project to a dict for API responses."""
+    from .models import GoalLog
+    import datetime
+    today = datetime.date.today()
+    week_start = today - datetime.timedelta(days=today.weekday())
+    active_logs = project.goal_logs.filter(is_deleted=False)
+    weekly_count = active_logs.filter(logged_at__gte=week_start).count()
+    done_count = active_logs.filter(is_done=True).count()
+    last_log = active_logs.order_by('-logged_at', '-created_at').first()
+    if last_log:
+        preview = last_log.body[:60]
+    else:
+        preview = (project.goal_description or '')[:60]
     return {
         'id': project.id,
         'title': project.title,
         'description': project.description or '',
         'status': project.status,
-        'current_focus': project.current_focus or '',
-        'next_steps': project.next_steps or '',
+        'goal_description': project.goal_description or '',
         'completed_notes': project.completed_notes or '',
         'color_hex': project.color_hex,
         'sort_order': project.sort_order,
         'note_count': project.project_notes.count(),
+        'weekly_log_count': weekly_count,
+        'done_log_count': done_count,
+        'last_log_preview': preview,
         'created_at': project.created_at.isoformat(),
         'updated_at': project.updated_at.isoformat(),
     }
@@ -163,3 +178,54 @@ def unlink_note_from_project(project, note) -> bool:
     from .models import ProjectNote
     deleted, _ = ProjectNote.objects.filter(project=project, note=note).delete()
     return deleted > 0
+
+
+# ---------------------------------------------------------------------------
+# GoalLog services
+# ---------------------------------------------------------------------------
+
+def get_goallog_dict(log) -> dict:
+    """Serialize a GoalLog to a dict for API responses."""
+    return {
+        'id': log.id,
+        'project_id': log.project_id,
+        'body': log.body,
+        'is_done': log.is_done,
+        'log_type': log.log_type,
+        'logged_at': str(log.logged_at),
+        'is_deleted': log.is_deleted,
+        'created_at': log.created_at.isoformat(),
+    }
+
+
+def get_goal_logs_for_project(project, include_deleted: bool = False):
+    """Return active GoalLogs for a project ordered by logged_at desc."""
+    qs = project.goal_logs.all()
+    if not include_deleted:
+        qs = qs.filter(is_deleted=False)
+    return qs.order_by('-logged_at', '-created_at')
+
+
+def get_behavior_tag_frequencies(user, days: int = 30) -> list:
+    """Return behavior tag frequency list for the last N days, excluding no_pattern."""
+    from .models import MoodLog
+    from django.utils import timezone
+    import datetime
+    since = timezone.now() - datetime.timedelta(days=days)
+    logs = MoodLog.objects.filter(
+        user=user, logged_at__gte=since,
+    ).exclude(behavior_tags='').values_list('behavior_tags', flat=True)
+
+    counts = {}
+    for tag_str in logs:
+        for slug in tag_str.split(';'):
+            slug = slug.strip()
+            if slug and slug != 'no_pattern':
+                counts[slug] = counts.get(slug, 0) + 1
+
+    result = [
+        {'slug': slug, 'count': cnt}
+        for slug, cnt in sorted(counts.items(), key=lambda x: -x[1])
+        if cnt >= 3
+    ]
+    return result[:3]

@@ -82,6 +82,7 @@ class MoodLog(models.Model):
         validators=[MinValueValidator(1), MaxValueValidator(10)],
     )
     emotion_tags = models.CharField(max_length=200, blank=True)
+    behavior_tags = models.CharField(max_length=200, blank=True, default='')
     note = models.TextField(null=True, blank=True)
     logged_at = models.DateTimeField(default=timezone.now)
 
@@ -140,8 +141,7 @@ class Project(models.Model):
     title = models.CharField(max_length=200)
     description = models.TextField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
-    current_focus = models.TextField(null=True, blank=True)
-    next_steps = models.TextField(null=True, blank=True)
+    goal_description = models.TextField(blank=True, default='')
     completed_notes = models.TextField(null=True, blank=True)
     color_hex = models.CharField(max_length=7, default='#c8a96e')
     sort_order = models.SmallIntegerField(default=0)
@@ -169,3 +169,34 @@ class ProjectNote(models.Model):
 
     def __str__(self):
         return f'{self.project} ↔ {self.note}'
+
+
+class GoalLog(models.Model):
+    LOG_TYPE_CHOICES = [
+        ('note', 'Note'),
+        ('done', 'Done'),
+        ('next', 'Next'),
+    ]
+
+    id = models.BigAutoField(primary_key=True)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='goal_logs')
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='goal_logs',
+    )
+    body = models.TextField()
+    is_done = models.BooleanField(default=False)
+    log_type = models.CharField(max_length=20, choices=LOG_TYPE_CHOICES, default='note')
+    logged_at = models.DateField(default=datetime.date.today)
+    is_deleted = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['project', '-logged_at'], name='atelier_glog_proj_idx'),
+            models.Index(fields=['user', '-logged_at'], name='atelier_glog_user_idx'),
+        ]
+
+    def __str__(self):
+        return f'{self.project} log at {self.logged_at}'

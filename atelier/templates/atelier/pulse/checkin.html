@@ -27,6 +27,17 @@
     </div>
   </div>
 
+  <div class="behavior-tags-group">
+    <p class="behavior-tags-title">오늘 어떤 패턴이 있었나요?</p>
+    <p class="behavior-tags-hint">고르지 않아도 괜찮아요.</p>
+    <div class="behavior-tag-buttons">
+      {% for tag in behavior_tags %}
+      <button class="behavior-tag-btn" data-slug="{{ tag.slug }}">{{ tag.text }}</button>
+      {% endfor %}
+    </div>
+    <p class="behavior-tags-skip-hint">선택하지 않아도 기록은 저장돼요.</p>
+  </div>
+
   <textarea id="checkin-note" class="note-body-textarea small" placeholder="더 하고 싶은 말이 있나요? (선택)"></textarea>
 
   <button id="submit-checkin" class="btn btn-primary">기록하기</button>
@@ -60,11 +71,40 @@
     });
   });
 
+  const selectedBehaviors = new Set();
+  const NO_PATTERN = 'no_pattern';
+  document.querySelectorAll('.behavior-tag-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const slug = btn.dataset.slug;
+      if (slug === NO_PATTERN) {
+        // Selecting no_pattern clears all others
+        selectedBehaviors.clear();
+        document.querySelectorAll('.behavior-tag-btn').forEach(b => b.classList.remove('selected'));
+        selectedBehaviors.add(NO_PATTERN);
+        btn.classList.add('selected');
+      } else {
+        // Selecting any other slug deselects no_pattern
+        if (selectedBehaviors.has(NO_PATTERN)) {
+          selectedBehaviors.delete(NO_PATTERN);
+          document.querySelectorAll('.behavior-tag-btn[data-slug="no_pattern"]').forEach(b => b.classList.remove('selected'));
+        }
+        if (selectedBehaviors.has(slug)) {
+          selectedBehaviors.delete(slug);
+          btn.classList.remove('selected');
+        } else {
+          selectedBehaviors.add(slug);
+          btn.classList.add('selected');
+        }
+      }
+    });
+  });
+
   document.getElementById('submit-checkin').addEventListener('click', async () => {
     const payload = {
       mood_score: parseInt(moodSlider.value),
       energy_score: parseInt(energySlider.value),
       emotion_tags: [...selectedTags].join(';'),
+      behavior_tags: [...selectedBehaviors].join(';'),
       note: document.getElementById('checkin-note').value,
     };
     const resp = await fetch('{% url "atelier:api_mood_list" %}', {

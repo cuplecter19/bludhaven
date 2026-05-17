@@ -336,12 +336,12 @@ class ProjectAPITest(TestCase):
     def test_patch_project(self):
         resp = self.client.patch(
             reverse('atelier:api_project_detail', args=[self.project.id]),
-            data=json.dumps({'current_focus': 'Working on tests', 'status': 'paused'}),
+            data=json.dumps({'goal_description': 'Working on tests', 'status': 'paused'}),
             content_type='application/json',
         )
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
-        self.assertEqual(data['current_focus'], 'Working on tests')
+        self.assertEqual(data['goal_description'], 'Working on tests')
         self.assertEqual(data['status'], 'paused')
 
     def test_delete_project(self):
@@ -500,3 +500,169 @@ class PHQ9TrendAPITest(TestCase):
         resp = self.client.get(reverse('atelier:api_phq9_trend'))
         dates = [d['logged_at'] for d in resp.json()['data']]
         self.assertEqual(dates, sorted(dates))
+
+
+# ---------------------------------------------------------------------------
+# Stage 6 tests — behavior_tags
+# ---------------------------------------------------------------------------
+
+class BehaviorTagsAPITest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user = make_user('behavioruser')
+        self.client.login(username='behavioruser', password='test')
+
+    def test_create_mood_with_behavior_tags(self):
+        resp = self.client.post(
+            reverse('atelier:api_mood_list'),
+            data=json.dumps({'mood_score': 6, 'behavior_tags': 'cant_start;scattered'}),
+            content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, 201)
+        self.assertEqual(resp.json()['behavior_tags'], 'cant_start;scattered')
+
+    def test_create_mood_without_behavior_tags(self):
+        resp = self.client.post(
+            reverse('atelier:api_mood_list'),
+            data=json.dumps({'mood_score': 7}),
+            content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, 201)
+        self.assertEqual(resp.json()['behavior_tags'], '')
+
+    def test_create_mood_invalid_behavior_slug(self):
+        resp = self.client.post(
+            reverse('atelier:api_mood_list'),
+            data=json.dumps({'mood_score': 5, 'behavior_tags': 'not_a_slug'}),
+            content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, 400)
+
+    def test_get_mood_list_includes_behavior_tags(self):
+        MoodLog.objects.create(user=self.user, mood_score=5, behavior_tags='on_track')
+        resp = self.client.get(reverse('atelier:api_mood_list'))
+        self.assertEqual(resp.status_code, 200)
+        logs = resp.json()['logs']
+        self.assertIn('behavior_tags', logs[0])
+        self.assertEqual(logs[0]['behavior_tags'], 'on_track')
+
+    def test_pulse_trend_includes_behavior_tags(self):
+        MoodLog.objects.create(user=self.user, mood_score=5, behavior_tags='exhausted')
+        resp = self.client.get(reverse('atelier:api_pulse_trend'))
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()['data']
+        self.assertTrue(any('behavior_tags' in item for item in data))
+
+    def test_no_pattern_is_valid_slug(self):
+        resp = self.client.post(
+            reverse('atelier:api_mood_list'),
+            data=json.dumps({'mood_score': 5, 'behavior_tags': 'no_pattern'}),
+            content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, 201)
+        self.assertEqual(resp.json()['behavior_tags'], 'no_pattern')
+
+    def test_checkin_page_has_behavior_tags(self):
+        resp = self.client.get(reverse('atelier:pulse_checkin'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'cant_start')
+        self.assertContains(resp, 'no_pattern')
+
+
+# ---------------------------------------------------------------------------
+# Stage 6 tests — GoalLog
+# ---------------------------------------------------------------------------
+
+class GoalLogAPITest(TestCase):
+    def setUp(self):
+        from atelier.models import Project
+        self.client = Client()
+        self.user = make_user('goalloguser')
+        self.client.login(username='goalloguser', password='test')
+        self.project = Project.objects.create(user=self.user, title='My Goal')
+
+    def _logs_url(self):
+        return reverse('atelier:api_goal_logs_list', args=[self.project.id])
+
+    def _log_url(self, log_id):
+        return reverse('atelier:api_goal_log_detail', args=[self.project.id, log_id])
+
+    def test_create_goal_log(self):
+        resp = self.client.post(
+            self._logs_url(),
+            data=json.dumps({'body': 'Today I worked on tests.', 'log_type': 'done'}),
+            content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, 201)
+        data = resp.json()
+        self.assertEqual(data['body'], 'Today I worked on tests.')
+        self.assertEqual(data['log_type'], 'done')
+        self.assertFalse(data['is_done'])
+
+    def test_create_goal_log_missing_body(self):
+        resp = self.client.post(
+            self._logs_url(),
+            data=json.dumps({'log_type': 'note'}),
+            content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, 400)
+
+    def test_list_goal_logs(self):
+        from atelier.models import GoalLog
+        GoalLog.objects.create(project=self.project, user=self.user, body='Log 1')
+        GoalLog.objects.create(project=self.project, user=self.user, body='Log 2')
+        resp = self.client.get(self._logs_url())
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(len(resp.json()['logs']), 2)
+
+    def test_soft_delete_goal_log(self):
+        from atelier.models import GoalLog
+        log = GoalLog.objects.create(project=self.project, user=self.user, body='To delete')
+        resp = self.client.delete(self._log_url(log.id))
+        self.assertEqual(resp.status_code, 204)
+        log.refresh_from_db()
+        self.assertTrue(log.is_deleted)
+
+    def test_deleted_log_not_in_list(self):
+        from atelier.models import GoalLog
+        log = GoalLog.objects.create(project=self.project, user=self.user, body='Hidden', is_deleted=True)
+        resp = self.client.get(self._logs_url())
+        ids = [l['id'] for l in resp.json()['logs']]
+        self.assertNotIn(log.id, ids)
+
+    def test_toggle_done(self):
+        from atelier.models import GoalLog
+        log = GoalLog.objects.create(project=self.project, user=self.user, body='Mark done')
+        resp = self.client.patch(
+            self._log_url(log.id),
+            data=json.dumps({'is_done': True}),
+            content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.json()['is_done'])
+
+    def test_other_user_cannot_access_logs(self):
+        from atelier.models import Project, GoalLog
+        other = make_user('other_goal')
+        other_proj = Project.objects.create(user=other, title='Other Goal')
+        GoalLog.objects.create(project=other_proj, user=other, body='private')
+        resp = self.client.get(reverse('atelier:api_goal_logs_list', args=[other_proj.id]))
+        self.assertEqual(resp.status_code, 404)
+
+    def test_default_log_type_is_note(self):
+        resp = self.client.post(
+            self._logs_url(),
+            data=json.dumps({'body': 'Just a note'}),
+            content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, 201)
+        self.assertEqual(resp.json()['log_type'], 'note')
+
+    def test_project_api_includes_goal_description(self):
+        resp = self.client.get(reverse('atelier:api_project_detail', args=[self.project.id]))
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIn('goal_description', data)
+        self.assertNotIn('current_focus', data)
+        self.assertNotIn('next_steps', data)
+

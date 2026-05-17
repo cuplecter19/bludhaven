@@ -39,4 +39,6 @@ urlpatterns = [
     path('api/projects/<int:project_id>/', views.api_project_detail, name='api_project_detail'),
     path('api/projects/<int:project_id>/notes/', views.api_project_notes, name='api_project_notes'),
     path('api/projects/<int:project_id>/notes/<int:note_id>/', views.api_project_note_unlink, name='api_project_note_unlink'),
+    path('api/projects/<int:project_id>/logs/', views.api_goal_logs_list, name='api_goal_logs_list'),
+    path('api/projects/<int:project_id>/logs/<int:log_id>/', views.api_goal_log_detail, name='api_goal_log_detail'),
 ]

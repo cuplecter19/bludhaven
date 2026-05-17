@@ -26,6 +26,21 @@
   <!-- Filled by pulse_chart.js -->
 </div>
 
+{% if show_patterns %}
+<div class="pattern-freq-section">
+  <h3 class="pulse-section-heading">자주 나타난 패턴 <span class="pattern-freq-period">(최근 30일)</span></h3>
+  {% for item in pattern_frequencies %}
+  <div class="pattern-freq-row">
+    <span class="pattern-freq-label">{{ item.text }}</span>
+    <div class="pattern-freq-bar-wrap">
+      <div class="pattern-freq-bar" style="width: {{ item.pct }}%;"></div>
+    </div>
+    <span class="pattern-freq-count">{{ item.count }}회</span>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
 <h3 class="pulse-section-heading">기분 추이 (최근 30일)</h3>
 <div id="trend-chart" class="trend-chart" aria-label="기분 트렌드 차트"></div>
 
