@@ -498,5 +498,5 @@ class PHQ9TrendAPITest(TestCase):
 
     def test_phq9_trend_chronological_order(self):
         resp = self.client.get(reverse('atelier:api_phq9_trend'))
-        scores = [d['total_score'] for d in resp.json()['data']]
-        self.assertEqual(scores, sorted(scores))
+        dates = [d['logged_at'] for d in resp.json()['data']]
+        self.assertEqual(dates, sorted(dates))

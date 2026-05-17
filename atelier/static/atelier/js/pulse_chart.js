@@ -109,7 +109,7 @@
 
       // Tooltip via title element
       var title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-      title.textContent = d.logged_at + ': ' + val;
+      title.textContent = `${d.logged_at}: ${val}`;
       rect.appendChild(title);
       svg.appendChild(rect);
     });
