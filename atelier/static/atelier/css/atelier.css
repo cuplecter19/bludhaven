@@ -26,6 +26,13 @@ body {
   padding: 1rem 2rem;
   background: var(--paper-warm);
 }
+.logo {
+  font-family: 'ClassyVogue', serif;
+  font-size: 1.4rem;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  text-decoration: none;
+}
 .atelier-nav {
   display: flex;
   align-items: center;
