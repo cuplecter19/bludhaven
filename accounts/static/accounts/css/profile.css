@@ -124,7 +124,7 @@ input[type="checkbox"] {
   font-family: var(--font-ko);
   font-size: 0.65rem;
   letter-spacing: 0.5px;
-  color: var(--line);
+  color: var(--gray);
 }
 
 /* ── Theme select ────────────────────────────────────────── */
