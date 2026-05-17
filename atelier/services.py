@@ -1,7 +1,6 @@
 import datetime
 
-from django.db.models import Avg, Q
-from django.db.models.functions import TruncDate
+from django.db.models import Q
 from django.utils import timezone
 
 from .utils import extract_references, is_numeric
@@ -70,22 +69,35 @@ def search_notes(user, query: str):
 
 
 def get_pulse_calendar_data(user, year: int, month: int) -> list:
-    """Return list of {date, mood_score, level} for a given month."""
+    """Return list of {date, mood_score, level, emotion_tags} for a given month.
+
+    mood_score is the average across all records for that day; emotion_tags
+    comes from the most-recent record of the day (latest logged_at).
+    """
+    from collections import defaultdict
+
     logs = (
         MoodLog.objects
         .filter(user=user, logged_at__year=year, logged_at__month=month)
-        .annotate(day=TruncDate('logged_at'))
-        .values('day')
-        .annotate(avg_mood=Avg('mood_score'))
-        .order_by('day')
+        .order_by('logged_at')
+        .values('logged_at', 'mood_score', 'emotion_tags')
     )
-    result = []
+
+    day_logs: dict = defaultdict(list)
     for log in logs:
-        avg = round(log['avg_mood'])
+        day = log['logged_at'].date()
+        day_logs[day].append(log)
+
+    result = []
+    for day in sorted(day_logs.keys()):
+        records = day_logs[day]
+        avg = round(sum(r['mood_score'] for r in records) / len(records))
+        latest = records[-1]  # last entry since ordered by logged_at ascending
         result.append({
-            'date': str(log['day']),
+            'date': str(day),
             'mood_score': avg,
             'level': get_mood_level(avg),
+            'emotion_tags': latest['emotion_tags'],
         })
     return result
 
