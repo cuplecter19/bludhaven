@@ -230,11 +230,7 @@
     </aside>
     {% endif %}
 
-    <script>
-      window.__CORE_MAINPAGE__ = {
-        isAdmin: {{ is_admin|yesno:"true,false" }}
-      };
-    </script>
+    <script id="core-mainpage-data" type="application/json">{"isAdmin": {{ is_admin|yesno:"true,false" }}}</script>
     <script type="module" src="{% static 'core/js/index.js' %}"></script>
 </body>
 </html>

@@ -1,0 +1,82 @@
+.container { max-width: 900px; margin: 5rem auto; padding: 0 2rem; text-align: center; }
+
+.section-label {
+  font-size: 0.7rem; color: var(--gray); letter-spacing: 3px;
+  text-transform: uppercase; margin-bottom: 1.5rem;
+}
+
+.hero-title {
+  font-family: 'ClassyVogue'; font-size: 4rem; letter-spacing: -1px;
+  line-height: 1; margin-bottom: 0.75rem;
+}
+
+.hero-sub {
+  font-family: 'Noto Sans KR'; font-size: 1rem; font-weight: 300;
+  color: var(--gray); margin-bottom: 4rem;
+}
+
+.summary-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem; margin-bottom: 4rem; text-align: left;
+}
+
+.summary-card {
+  background: #fff; border: 1px solid var(--line);
+  padding: 1.5rem 2rem;
+}
+
+.summary-card .s-label {
+  font-size: 0.7rem; color: var(--gray); text-transform: uppercase;
+  letter-spacing: 1px; margin-bottom: 0.4rem;
+}
+
+.summary-card .s-value {
+  font-family: 'ClassyVogue'; font-size: 1.6rem; font-weight: 700;
+}
+
+.summary-card .s-sub { font-size: 0.8rem; color: var(--rose); margin-top: 0.2rem; }
+
+.action-row { display: flex; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+
+.action-btn {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 2rem 3rem; background: #fff; border: 1px solid var(--line);
+  text-decoration: none; color: var(--navy); transition: 0.3s; min-width: 180px;
+}
+
+.action-btn:hover { border-color: var(--accent); background: #fdf8f6; }
+.action-btn .a-icon { font-size: 2rem; margin-bottom: 0.75rem; }
+
+.action-btn .a-title {
+  font-family: 'ClassyVogue'; font-size: 0.95rem; letter-spacing: 2px;
+  text-transform: uppercase; margin-bottom: 0.3rem;
+}
+
+.action-btn .a-desc { font-size: 0.75rem; color: var(--gray); letter-spacing: 0.5px; }
+
+/* ── CSV upload section ── */
+.csv-upload-section {
+  margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--line);
+}
+
+.flash-message {
+  margin-bottom: 1rem; padding: 0.75rem 1rem; font-size: 0.85rem;
+}
+
+.flash-message--error {
+  background: #FEF2F2; border: 1px solid #FECACA; color: #991B1B;
+}
+
+.flash-message--info {
+  background: #EFF6FF; border: 1px solid #BFDBFE; color: #1D4ED8;
+}
+
+.csv-upload-form {
+  display: inline-flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+}
+
+.csv-upload-hint { font-size: 0.8rem; color: var(--gray); }
+
+.csv-upload-input { font-size: 0.8rem; }
+
+.btn--sm { padding: 0.7rem 1.5rem; font-size: 0.7rem; }

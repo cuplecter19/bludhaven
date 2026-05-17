@@ -6,44 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SCRAMBLE | Blüdhaven</title>
   <link rel="stylesheet" href="{% static 'phrases/css/phrases_base.css' %}">
-  <style>
-    .container { max-width: 900px; margin: 5rem auto; padding: 0 2rem; text-align: center; }
-    .card-meta {
-      font-size: 0.75rem; color: var(--gray); letter-spacing: 2px;
-      text-transform: uppercase; margin-bottom: 2rem;
-    }
-    .phrase-ko {
-      font-family: 'Noto Sans KR'; font-size: 1.5rem; font-weight: 300;
-      margin-bottom: 3rem; color: var(--navy);
-    }
-    .word-bank {
-      display: flex; flex-wrap: wrap; justify-content: center;
-      gap: 0.75rem; margin-bottom: 2.5rem; min-height: 56px;
-    }
-    .word-token {
-      padding: 0.6rem 1.2rem; background: #fff; border: 1px solid var(--line);
-      font-size: 0.9rem; cursor: pointer; letter-spacing: 0.5px;
-      transition: 0.2s; user-select: none;
-    }
-    .word-token:hover { border-color: var(--accent); background: #fdf8f6; }
-    .word-token.selected { background: var(--navy); color: #fff; border-color: var(--navy); }
-    .answer-track {
-      border-bottom: 2px solid var(--navy); min-height: 56px; padding: 0.5rem;
-      display: flex; flex-wrap: wrap; justify-content: center; gap: 0.75rem;
-      margin-bottom: 2.5rem;
-    }
-    .answer-track .word-token { cursor: pointer; }
-    .btn-group { display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; }
-    .btn-reset { background: var(--line); color: var(--navy); }
-    .btn-reset:hover { background: #ddd5ce; }
-    .answer-reveal {
-      display: none; margin-top: 2rem; padding-top: 2rem;
-      border-top: 1px solid var(--line); animation: fadeIn 0.5s ease;
-    }
-    .answer-reveal .phrase {
-      font-family: 'Noto Sans KR'; font-size: 1.5rem; font-weight: 500; color: var(--navy);
-    }
-  </style>
+  <link rel="stylesheet" href="{% static 'phrases/css/scramble.css' %}">
 </head>
 <body>
   <header>
@@ -64,18 +27,18 @@
       <p class="empty-state">카드를 불러오는 중...</p>
     </div>
 
-    <div id="answer-track" class="answer-track" style="display:none;"></div>
+    <div id="answer-track" class="answer-track hidden"></div>
 
-    <div class="btn-group" id="action-btns" style="display:none;">
+    <div class="btn-group hidden" id="action-btns">
       <button class="btn btn-reset" onclick="resetTokens()">RESET</button>
       <button class="btn btn-primary" onclick="submitScramble()">SUBMIT</button>
     </div>
 
-    <div id="result-area" style="margin-top:2rem;"></div>
-    <div id="answer-reveal" class="answer-reveal"></div>
+    <div id="result-area" class="result-area"></div>
+    <div id="answer-reveal" class="answer-reveal hidden"></div>
 
-    <div style="margin-top:2rem;">
-      <button class="btn btn-accent" id="nextBtn" style="display:none; padding:0.8rem 2rem;" onclick="loadNextCard()">다음 카드 →</button>
+    <div class="next-btn-area">
+      <button class="btn btn-accent hidden" id="nextBtn" onclick="loadNextCard()">다음 카드 →</button>
     </div>
   </div>
 
@@ -88,10 +51,10 @@
 
   async function loadNextCard() {
     document.getElementById('result-area').innerHTML = '';
-    document.getElementById('answer-reveal').style.display = 'none';
-    document.getElementById('nextBtn').style.display = 'none';
-    document.getElementById('answer-track').style.display = 'none';
-    document.getElementById('action-btns').style.display = 'none';
+    document.getElementById('answer-reveal').classList.add('hidden');
+    document.getElementById('nextBtn').classList.add('hidden');
+    document.getElementById('answer-track').classList.add('hidden');
+    document.getElementById('action-btns').classList.add('hidden');
     selectedOrder = [];
 
     const res = await fetch("{% url 'phrases:api_cards_due' %}?mode=scramble&limit=1");
@@ -107,7 +70,7 @@
     scrambledWords = currentCard.scramble_data.shuffled || [];
     startTime = Date.now();
 
-    const tags = currentCard.tags.map(t => `<span class="tag" style="background:var(--line);padding:0.2rem 0.5rem;font-size:0.7rem;color:var(--gray);">${t.name}</span>`).join('');
+    const tags = currentCard.tags.map(t => `<span class="tag">${t.name}</span>`).join('');
     document.getElementById('scramble-area').innerHTML = `
       <div class="card-meta">Box ${currentCard.box_number}${tags ? ' · ' + tags : ''}</div>
       <div class="phrase-ko">${currentCard.phrase_ko || ''}</div>
@@ -116,8 +79,8 @@
       ).join('')}</div>
     `;
     document.getElementById('answer-track').innerHTML = '';
-    document.getElementById('answer-track').style.display = 'flex';
-    document.getElementById('action-btns').style.display = 'flex';
+    document.getElementById('answer-track').classList.remove('hidden');
+    document.getElementById('action-btns').classList.remove('hidden');
   }
 
   function selectWord(el) {
@@ -160,7 +123,7 @@
     });
     const data = await res.json();
 
-    document.getElementById('action-btns').style.display = 'none';
+    document.getElementById('action-btns').classList.add('hidden');
     const el = document.getElementById('result-area');
     if (data.is_correct) {
       const pts = data.points_earned ? ` (+${data.points_earned} pts)` : '';
@@ -171,8 +134,8 @@
 
     const rev = document.getElementById('answer-reveal');
     rev.innerHTML = `<div class="phrase">${data.correct_order.join(' ')}</div>`;
-    rev.style.display = 'block';
-    document.getElementById('nextBtn').style.display = 'inline-block';
+    rev.classList.remove('hidden');
+    document.getElementById('nextBtn').classList.remove('hidden');
   }
 
   loadNextCard();
