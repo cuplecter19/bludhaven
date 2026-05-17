@@ -5,6 +5,7 @@ import { initEditorPanel } from './editor-panel.js';
 import { createStickerEditController } from './sticker-edit-mode.js';
 
 const root = document.getElementById('scene-root');
+window.__CORE_MAINPAGE__ = JSON.parse(document.getElementById('core-mainpage-data')?.textContent || '{}');
 const isAdmin = !!window.__CORE_MAINPAGE__?.isAdmin;
 const store = createStateStore();
 let parallaxEngine = null;
